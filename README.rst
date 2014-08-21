@@ -42,10 +42,5 @@ Pass through arguments to requests (see also `requests  documentation <http://do
 
 Tests
 -----
-Currently testing depends on an unreleased version of the `responsess library <https://github.com/dropbox/responses>`_).
-
-.. code-block:: shell
-    tox
-    coverage run tests.py
-    coverage html
+Install the Python tox package and run ``tox``, it'll test this package with Python 2.7 and 3.4.
 

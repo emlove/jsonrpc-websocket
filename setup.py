@@ -10,7 +10,7 @@ setup(
     keywords='json-rpc requests',
     url='http://github.com/gciotta/jsonrpc-requests',
     description='''A JSON-RPC client library, backed by requests''',
-    long_description=open('README.txt').read(),
+    long_description=open('README.rst').read(),
     install_requires=('requests',),
     classifiers=[
         'Development Status :: 4 - Beta',
