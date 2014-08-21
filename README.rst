@@ -1,5 +1,3 @@
-requests dependency in setup.py
-
 jsonrpc-requests: a JSON-RPC client library in less than 90 lines of code, backed by `requests  <http://python-requests.org>`_
 =======================================================================================================================
 
