@@ -43,17 +43,17 @@ class TestJSONRPCClient(TestCase):
         # test keyword args
         self.assertSameJSON(
             '''{"params": {"foo": "bar"}, "jsonrpc": "2.0", "method": "my_method_name", "id": "1"}''',
-            self.server.dumps('my_method_name', params={'foo': 'bar'}, is_notification=False)
+            self.server.serialize('my_method_name', params={'foo': 'bar'}, is_notification=False)
         )
         # test positional args
         self.assertSameJSON(
             '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name", "id": "1"}''',
-            self.server.dumps('my_method_name', params=('foo', 'bar'), is_notification=False)
+            self.server.serialize('my_method_name', params=('foo', 'bar'), is_notification=False)
         )
         # test notification
         self.assertSameJSON(
             '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name"}''',
-            self.server.dumps('my_method_name', params=('foo', 'bar'), is_notification=True)
+            self.server.serialize('my_method_name', params=('foo', 'bar'), is_notification=True)
         )
 
     def test_parse_result(self):
