@@ -57,6 +57,7 @@ class Server(object):
 
     @staticmethod
     def dumps(data):
+        """Override this method to customize the serialization process (eg. datetime handling)"""
         return json.dumps(data)
 
     def serialize(self, method_name, params, is_notification):

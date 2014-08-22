@@ -1,7 +1,7 @@
-jsonrpc-requests: a JSON-RPC client library in less than 90 lines of code, backed by `requests  <http://python-requests.org>`_
-=======================================================================================================================
+jsonrpc-requests: a compact JSON-RPC client library backed by `requests  <http://python-requests.org>`_
+=======================================================================================================
 
-This is a compact and simple JSON-RPC client implementation written while debugging a picky server.
+This is a compact (~90 SLOC) and simple JSON-RPC client implementation written while debugging a picky server.
 
 Main Features
 -------------
