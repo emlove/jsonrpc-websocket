@@ -2,6 +2,7 @@ import unittest
 import random
 import json
 import requests
+import requests.exceptions
 import responses
 import inspect
 
@@ -70,9 +71,12 @@ class TestJSONRPCClient(TestCase):
     @responses.activate
     def test_send_request(self):
         # catch non-json responses
-        with self.assertRaisesRegex(TransportError, 'Cannot deserialize response body'):
+        with self.assertRaises(TransportError) as transport_error:
             responses.add(responses.POST, 'http://mock/xmlrpc', body='not json', content_type='application/json')
             self.server.send_request('my_method', is_notification=False, params=None)
+
+        self.assertEqual(transport_error.exception.args[0], 'Cannot deserialize response body')
+        self.assertIsInstance(transport_error.exception.args[1], ValueError)
         responses.reset()
 
         # catch non-200 responses
@@ -96,6 +100,13 @@ class TestJSONRPCClient(TestCase):
                       content_type='application/json')
         self.server.send_request('my_notification', is_notification=True, params=None)
         responses.reset()
+
+    def test_exception_passthrough(self):
+        with self.assertRaises(TransportError) as transport_error:
+            s = Server('http://host-doesnt-exist')
+            s.foo()
+        self.assertEqual(transport_error.exception.args[0], 'Error calling method foo')
+        self.assertIsInstance(transport_error.exception.args[1], requests.exceptions.RequestException)
 
     def test_method_call(self):
         """mixing *args and **kwargs is forbidden by the spec"""

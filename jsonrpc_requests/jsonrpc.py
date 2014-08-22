@@ -29,8 +29,8 @@ class Server(object):
         request_body = self.serialize(method_name, params, is_notification)
         try:
             response = self.request(data=request_body)
-        except requests.RequestException as e:
-            raise TransportError(str(e))
+        except requests.RequestException as requests_exception:
+            raise TransportError('Error calling method %s' % method_name, requests_exception)
 
         if not response.status_code == requests.codes.ok:
             raise TransportError(response.status_code)
@@ -38,8 +38,8 @@ class Server(object):
         if not is_notification:
             try:
                 return self.parse_result(response.json())
-            except ValueError:
-                raise TransportError('Cannot deserialize response body')
+            except ValueError as value_error:
+                raise TransportError('Cannot deserialize response body', value_error)
 
     @staticmethod
     def parse_result(result):

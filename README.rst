@@ -20,6 +20,7 @@ Usage
 -----
 .. code-block:: python
 
+    from jsonrpc_requests import Server
     server = Server('http://localhost:8080')
     server.foo(1, 2)
     server.foo(bar=1, baz=2)
@@ -29,13 +30,26 @@ A notification:
 
 .. code-block:: python
 
+    from jsonrpc_requests import Server
     server.foo(bar=1, _notification=True)
 
 Pass through arguments to requests (see also `requests  documentation <http://docs.python-requests.org/en/latest/>`_)
 
 .. code-block:: python
 
+    from jsonrpc_requests import Server
     server = Server('http://localhost:8080', auth=('user', 'pass'), headers={'x-test2': 'true'})
+
+Pass through requests exceptions
+
+.. code-block:: python
+
+    from jsonrpc_requests import Server, TransportError
+    server = Server('http://unknown-host')
+    try:
+        server.foo()
+    except TransportError as transport_error:
+        print(transport_error.args[1]) # this will hold a `requests.exceptions.RequestException` instance
 
 
 Tests
