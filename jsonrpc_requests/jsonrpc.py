@@ -22,7 +22,6 @@ class Server(object):
     """A connection to a HTTP JSON-RPC server, backed by requests"""
     def __init__(self, url, **requests_kwargs):
         self.request = functools.partial(requests.post, url, **requests_kwargs)
-        self.method_name = None  # the RPC method name we're going to call
 
     def send_request(self, method_name, is_notification, params):
         """Issue the HTTP request to the server and return the method result (if not a notification)"""
@@ -71,18 +70,26 @@ class Server(object):
         return self.dumps(data)
 
     def __getattr__(self, method_name):
-        """Allow calling a method accessing server.method_name()"""
-        if self.method_name:  # accessing a second-level namespace, like server.utils.something()
-            self.method_name = '%s.%s' % (self.method_name, method_name)
-        else:
-            self.method_name = method_name
-        return self
+        return _request_method(self.__request, method_name)
 
-    def __call__(self, *args, **kwargs):
+    def __request(self, method_name, args=None, kwargs=None, id=0):
         """Perform the actual RPC call. If _notification=True, send a notification and don't wait for a response"""
         is_notification = kwargs.pop('_notification', False)
         if args and kwargs:
             raise ProtocolError('JSON-RPC spec forbids mixing arguments and keyword arguments')
-        method_name = self.method_name
-        self.method_name = None  # clear it so that we don't continue nesting namespaces in __getattr__
         return self.send_request(method_name, is_notification, args or kwargs)
+
+class _request_method:
+    def __init__(self, request_method, method_name):
+        if method_name.startswith("_"):  # prevent rpc-calls for private methods
+            raise AttributeError("invalid attribute '%s'" % method_name)
+        self.__request_method  = request_method
+        self.__method_name = method_name
+
+    def __getattr__(self, method_name):
+        if method_name.startswith("_"):  # prevent rpc-calls for private methods
+            raise AttributeError("invalid attribute '%s'" % method_name)
+        return _request_method(self.__request_method, "%s.%s" % (self.__method_name, method_name))
+
+    def __call__(self, *args, **kwargs):
+        return self.__request_method(self.__method_name, args, kwargs)

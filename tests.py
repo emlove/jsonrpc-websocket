@@ -14,7 +14,6 @@ try:
 except ImportError:
     from mock import Mock
 
-
 class TestCase(unittest.TestCase):
     def assertSameJSON(self, json1, json2):
         """Tells whether two json strings, once decoded, are the same dictionary"""
@@ -36,9 +35,9 @@ class TestJSONRPCClient(TestCase):
         self.server = Server('http://mock/xmlrpc')
 
     def test_length(self):
-        """Verify that this library is really smaller than 90 lines, as stated in README.rst"""
+        """Verify that this library is really smaller than 100 lines, as stated in README.rst"""
         with open(inspect.getfile(Server)) as library_file:
-            self.assertLessEqual(len(library_file.readlines()), 90)
+            self.assertLessEqual(len(library_file.readlines()), 100)
 
     def test_dumps(self):
         # test keyword args
@@ -113,10 +112,22 @@ class TestJSONRPCClient(TestCase):
         with self.assertRaisesRegex(ProtocolError, 'JSON-RPC spec forbids mixing arguments and keyword arguments'):
             self.server.testmethod(1, 2, a=1, b=2)
 
+    @responses.activate
     def test_method_nesting(self):
         """Test that we correctly nest namespaces"""
-        nested_method = self.server.nest.testmethod
-        self.assertEqual(nested_method.method_name, 'nest.testmethod')
+        def callback(request):
+            request_message = json.loads(request.body)
+            if (request_message["params"][0] == request_message["method"]):
+                return (200, {}, u'{"jsonrpc": "2.0", "result": true, "id": 1}')
+            else:
+                return (200, {}, u'{"jsonrpc": "2.0", "result": false, "id": 1}')
+
+        responses.add_callback(
+            responses.POST, 'http://mock/xmlrpc', content_type='application/json', callback=callback,
+        )
+
+        self.assertEqual(self.server.nest.testmethod("nest.testmethod"), True)
+        self.assertEqual(self.server.nest.testmethod.some.other.method("nest.testmethod.some.other.method"), True)
 
     @responses.activate
     def test_calls(self):
