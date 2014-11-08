@@ -1,10 +1,13 @@
 import unittest
 import random
 import json
+import inspect
+import os
+
+import pep8
 import requests
 import requests.exceptions
 import responses
-import inspect
 
 from jsonrpc_requests import Server, ProtocolError, TransportError
 
@@ -38,6 +41,19 @@ class TestJSONRPCClient(TestCase):
         """Verify that this library is really smaller than 100 lines, as stated in README.rst"""
         with open(inspect.getfile(Server)) as library_file:
             self.assertLessEqual(len(library_file.readlines()), 100)
+
+    def test_pep8_conformance(self):
+        """Test that we conform to PEP8."""
+
+        source_files = []
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        package_dir = os.path.join(project_dir, 'jsonrpc_requests')
+        for root, directories, filenames in os.walk(package_dir):
+            source_files.extend([os.path.join(root, f) for f in filenames if f.endswith('.py')])
+
+        pep8style = pep8.StyleGuide(quiet=False, max_line_length=120)
+        result = pep8style.check_files(source_files)
+        self.assertEqual(result.total_errors, 0, "Found code style errors (and warnings).")
 
     def test_dumps(self):
         # test keyword args

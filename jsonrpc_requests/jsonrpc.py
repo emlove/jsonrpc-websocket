@@ -49,7 +49,7 @@ class Server(object):
             code = result['error'].get('code', '')
             message = result['error'].get('message', '')
             raise ProtocolError(code, message)
-        elif not 'result' in result:
+        elif 'result' not in result:
             raise ProtocolError('Response without a result field')
         else:
             return result['result']
@@ -70,26 +70,27 @@ class Server(object):
         return self.dumps(data)
 
     def __getattr__(self, method_name):
-        return _request_method(self.__request, method_name)
+        return Method(self.__request, method_name)
 
-    def __request(self, method_name, args=None, kwargs=None, id=0):
+    def __request(self, method_name, args=None, kwargs=None):
         """Perform the actual RPC call. If _notification=True, send a notification and don't wait for a response"""
         is_notification = kwargs.pop('_notification', False)
         if args and kwargs:
             raise ProtocolError('JSON-RPC spec forbids mixing arguments and keyword arguments')
         return self.send_request(method_name, is_notification, args or kwargs)
 
-class _request_method:
+
+class Method(object):
     def __init__(self, request_method, method_name):
         if method_name.startswith("_"):  # prevent rpc-calls for private methods
             raise AttributeError("invalid attribute '%s'" % method_name)
-        self.__request_method  = request_method
+        self.__request_method = request_method
         self.__method_name = method_name
 
     def __getattr__(self, method_name):
         if method_name.startswith("_"):  # prevent rpc-calls for private methods
             raise AttributeError("invalid attribute '%s'" % method_name)
-        return _request_method(self.__request_method, "%s.%s" % (self.__method_name, method_name))
+        return Method(self.__request_method, "%s.%s" % (self.__method_name, method_name))
 
     def __call__(self, *args, **kwargs):
         return self.__request_method(self.__method_name, args, kwargs)
