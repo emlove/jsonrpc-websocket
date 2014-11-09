@@ -123,6 +123,16 @@ class TestJSONRPCClient(TestCase):
         self.assertEqual(transport_error.exception.args[0], 'Error calling method foo')
         self.assertIsInstance(transport_error.exception.args[1], requests.exceptions.RequestException)
 
+    def test_forbid_private_methods(self):
+        """Test that we can't call private class methods (those starting with '_')"""
+        s = Server('http://host-doesnt-exist')
+        with self.assertRaises(AttributeError):
+            s._foo()
+
+        # nested private method call
+        with self.assertRaises(AttributeError):
+            s.foo.bar._baz()
+
     @responses.activate
     def test_headers_passthrough(self):
         """Test that we correctly send RFC-defined headers and merge them with user defined ones"""
