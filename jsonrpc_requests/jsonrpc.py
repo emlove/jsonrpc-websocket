@@ -21,18 +21,18 @@ class ProtocolError(JSONRPCError):
 class Server(object):
     """A connection to a HTTP JSON-RPC server, backed by requests"""
     def __init__(self, url, **requests_kwargs):
+        requests_kwargs.setdefault('headers', {}).update({  # Merge user-defined headers with RFC-defined ones
+            'Content-Type': 'application/json',
+            'Accept': 'application/json-rpc',
+        })
         self.request = functools.partial(requests.post, url, **requests_kwargs)
         self.method_name = None  # the RPC method name we're going to call
 
     def send_request(self, method_name, is_notification, params):
         """Issue the HTTP request to the server and return the method result (if not a notification)"""
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json-rpc'
-            }
         request_body = self.serialize(method_name, params, is_notification)
         try:
-            response = self.request(data=request_body, headers=headers)
+            response = self.request(data=request_body)
         except requests.RequestException as requests_exception:
             raise TransportError('Error calling method %s' % method_name, requests_exception)
 
