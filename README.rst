@@ -56,3 +56,7 @@ Tests
 -----
 Install the Python tox package and run ``tox``, it'll test this package with Python 2.7 and 3.4.
 
+Credits
+-------
+`@mbroadst <https://github.com/mbroadst>`_ for providing full support for nested method calls, JSON-RPC RFC
+compliance and other improvements.
