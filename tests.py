@@ -123,6 +123,24 @@ class TestJSONRPCClient(TestCase):
         self.assertEqual(transport_error.exception.args[0], 'Error calling method foo')
         self.assertIsInstance(transport_error.exception.args[1], requests.exceptions.RequestException)
 
+    @responses.activate
+    def test_headers_passthrough(self):
+        """Test that we correctly send RFC-defined headers and merge them with user defined ones"""
+        def callback(request):
+            expected_headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json-rpc',
+                'X-TestCustomHeader': '1'
+            }
+            self.assertTrue(set(expected_headers.items()).issubset(set(request.headers.items())))
+            return 200, {}, u'{"jsonrpc": "2.0", "result": true, "id": 1}'
+
+        responses.add_callback(
+            responses.POST, 'http://mock/xmlrpc', content_type='application/json', callback=callback,
+        )
+        s = Server('http://mock/xmlrpc', headers={'X-TestCustomHeader': '1'})
+        s.foo()
+
     def test_method_call(self):
         """mixing *args and **kwargs is forbidden by the spec"""
         with self.assertRaisesRegex(ProtocolError, 'JSON-RPC spec forbids mixing arguments and keyword arguments'):
