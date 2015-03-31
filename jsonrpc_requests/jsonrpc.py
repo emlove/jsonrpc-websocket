@@ -20,7 +20,7 @@ class ProtocolError(JSONRPCError):
 
 class Server(object):
     """A connection to a HTTP JSON-RPC server, backed by requests"""
-    def __init__(self, url, **requests_kwargs):
+    def __init__(self, url, requests=requests, **requests_kwargs):
         requests_kwargs.setdefault('headers', {}).update({  # Merge user-defined headers with RFC-defined ones
             'Content-Type': 'application/json',
             'Accept': 'application/json-rpc',
