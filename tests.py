@@ -40,7 +40,8 @@ class TestJSONRPCClient(TestCase):
     def test_length(self):
         """Verify that this library is really smaller than 100 lines, as stated in README.rst"""
         with open(inspect.getfile(Server)) as library_file:
-            self.assertLessEqual(len(library_file.readlines()), 100)
+            self.assertLessEqual(len([l for l in library_file.readlines()
+                                      if l != "\n"]), 100)
 
     def test_pep8_conformance(self):
         """Test that we conform to PEP8."""
