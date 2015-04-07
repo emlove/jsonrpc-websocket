@@ -20,12 +20,14 @@ class ProtocolError(JSONRPCError):
 
 class Server(object):
     """A connection to a HTTP JSON-RPC server, backed by requests"""
-    def __init__(self, url, requests=requests, **requests_kwargs):
-        requests_kwargs.setdefault('headers', {}).update({  # Merge user-defined headers with RFC-defined ones
+
+    def __init__(self, url, session=None, **requests_kwargs):
+        self.session = requests.Session() if session is None else session
+        self.session.headers.update({
             'Content-Type': 'application/json',
             'Accept': 'application/json-rpc',
         })
-        self.request = functools.partial(requests.post, url, **requests_kwargs)
+        self.request = functools.partial(self.session.post, url, **requests_kwargs)
 
     def send_request(self, method_name, is_notification, params):
         """Issue the HTTP request to the server and return the method result (if not a notification)"""
