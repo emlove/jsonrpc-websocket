@@ -22,7 +22,7 @@ class Server(object):
     """A connection to a HTTP JSON-RPC server, backed by requests"""
 
     def __init__(self, url, session=None, **requests_kwargs):
-        self.session = requests.Session() if session is None else session
+        self.session = session or requests.Session()
         self.session.headers.update({
             'Content-Type': 'application/json',
             'Accept': 'application/json-rpc',
