@@ -56,7 +56,7 @@ class Server(object):
         if result.get('error'):
             code = result['error'].get('code', '')
             message = result['error'].get('message', '')
-            raise ProtocolError(code, message)
+            raise ProtocolError(code, message, result)
         elif 'result' not in result:
             raise ProtocolError('Response without a result field')
         else:
