@@ -35,16 +35,18 @@ class Server(object):
         try:
             response = self.request(data=request_body)
         except requests.RequestException as requests_exception:
-            raise TransportError('Error calling method %s' % method_name, requests_exception)
+            raise TransportError('Error calling method %r' % method_name, requests_exception)
 
-        if not response.status_code == requests.codes.ok:
+        if response.status_code != requests.codes.ok:
             raise TransportError(response.status_code)
 
         if not is_notification:
             try:
-                return self.parse_result(response.json())
+                parsed = response.json()
             except ValueError as value_error:
                 raise TransportError('Cannot deserialize response body', value_error)
+
+            return self.parse_result(parsed)
 
     @staticmethod
     def parse_result(result):
@@ -54,7 +56,7 @@ class Server(object):
         if result.get('error'):
             code = result['error'].get('code', '')
             message = result['error'].get('message', '')
-            raise ProtocolError(code, message)
+            raise ProtocolError(code, message, result)
         elif 'result' not in result:
             raise ProtocolError('Response without a result field')
         else:
