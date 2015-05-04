@@ -42,9 +42,11 @@ class Server(object):
 
         if not is_notification:
             try:
-                return self.parse_result(response.json())
+                parsed = response.json()
             except ValueError as value_error:
                 raise TransportError('Cannot deserialize response body', value_error)
+
+            return self.parse_result(parsed)
 
     @staticmethod
     def parse_result(result):
