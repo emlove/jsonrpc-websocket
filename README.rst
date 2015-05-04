@@ -60,3 +60,5 @@ Credits
 -------
 `@mbroadst <https://github.com/mbroadst>`_ for providing full support for nested method calls, JSON-RPC RFC
 compliance and other improvements.
+
+`@vaab <https://github.com/vaab>`_ for providing api and tests improvements, better RFC compliance.
