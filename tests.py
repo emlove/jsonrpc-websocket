@@ -34,7 +34,7 @@ class TestCase(unittest.TestCase):
 class TestJSONRPCClient(TestCase):
 
     def setUp(self):
-        random.randint = Mock(return_value="1")
+        random.randint = Mock(return_value=1)
         self.server = Server('http://mock/xmlrpc')
 
     def test_length(self):
@@ -59,12 +59,12 @@ class TestJSONRPCClient(TestCase):
     def test_dumps(self):
         # test keyword args
         self.assertSameJSON(
-            '''{"params": {"foo": "bar"}, "jsonrpc": "2.0", "method": "my_method_name", "id": "1"}''',
+            '''{"params": {"foo": "bar"}, "jsonrpc": "2.0", "method": "my_method_name", "id": 1}''',
             self.server.serialize('my_method_name', params={'foo': 'bar'}, is_notification=False)
         )
         # test positional args
         self.assertSameJSON(
-            '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name", "id": "1"}''',
+            '''{"params": ["foo", "bar"], "jsonrpc": "2.0", "method": "my_method_name", "id": 1}''',
             self.server.serialize('my_method_name', params=('foo', 'bar'), is_notification=False)
         )
         # test notification
