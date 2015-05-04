@@ -35,7 +35,7 @@ class Server(object):
         try:
             response = self.request(data=request_body)
         except requests.RequestException as requests_exception:
-            raise TransportError('Error calling method %s' % method_name, requests_exception)
+            raise TransportError('Error calling method %r' % method_name, requests_exception)
 
         if not response.status_code == requests.codes.ok:
             raise TransportError(response.status_code)

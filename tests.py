@@ -121,7 +121,7 @@ class TestJSONRPCClient(TestCase):
         with self.assertRaises(TransportError) as transport_error:
             s = Server('http://host-doesnt-exist')
             s.foo()
-        self.assertEqual(transport_error.exception.args[0], 'Error calling method foo')
+        self.assertEqual(transport_error.exception.args[0], "Error calling method 'foo'")
         self.assertIsInstance(transport_error.exception.args[1], requests.exceptions.RequestException)
 
     def test_forbid_private_methods(self):
