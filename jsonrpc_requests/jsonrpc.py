@@ -37,7 +37,7 @@ class Server(object):
         except requests.RequestException as requests_exception:
             raise TransportError('Error calling method %r' % method_name, requests_exception)
 
-        if not response.status_code == requests.codes.ok:
+        if response.status_code != requests.codes.ok:
             raise TransportError(response.status_code)
 
         if not is_notification:
