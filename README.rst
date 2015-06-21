@@ -1,6 +1,11 @@
 jsonrpc-requests: a compact JSON-RPC client library backed by `requests  <http://python-requests.org>`_
 =======================================================================================================
 
+.. image:: https://travis-ci.org/gciotta/jsonrpc-requests.svg
+    :target: https://travis-ci.org/gciotta/jsonrpc-requests
+.. image:: https://coveralls.io/repos/gciotta/jsonrpc-requests/badge.svg
+    :target: https://coveralls.io/r/gciotta/jsonrpc-requests
+
 This is a compact (~100 SLOC) and simple JSON-RPC client implementation written while debugging a picky server.
 
 Main Features
