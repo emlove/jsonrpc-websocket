@@ -1,8 +1,15 @@
-from setuptools import setup
+from __future__ import print_function
+
+try:
+    from setuptools import setup
+except ImportError:
+    import sys
+    print("Please install the `setuptools` package in order to install this library", file=sys.stderr)
+    raise
 
 setup(
     name='jsonrpc-requests',
-    version='0.1',
+    version='0.2',
     author='Giuseppe Ciotta',
     author_email='gciotta@gmail.com',
     packages=('jsonrpc_requests',),
