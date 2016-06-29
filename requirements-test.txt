@@ -1,5 +1,5 @@
-pep8==1.6.2
-coverage==4.0a5
-coveralls==1.0a2
-responses==0.4.0
-mock==1.0.1 # this is not actually needed for python3
+pep8==1.7.0
+coverage==4.1
+coveralls==1.1
+responses==0.5.1
+mock==2.0.0 # this is not actually needed for python3

@@ -11,7 +11,7 @@ This is a compact (~100 SLOC) and simple JSON-RPC client implementation written 
 Main Features
 -------------
 
-* Python 2.7 & 3.4 compatible
+* Python 2.7, 3.4 & 3.5 compatible
 * Exposes requests options
 * Supports nested namespaces (eg. `app.users.getUsers()`)
 * 100% test coverage
@@ -59,7 +59,7 @@ Pass through requests exceptions
 
 Tests
 -----
-Install the Python tox package and run ``tox``, it'll test this package with Python 2.7 and 3.4.
+Install the Python tox package and run ``tox``, it'll test this package with various versions of Python.
 
 Credits
 -------
