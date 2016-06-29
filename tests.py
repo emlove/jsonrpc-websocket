@@ -204,6 +204,20 @@ class TestJSONRPCClient(TestCase):
         self.assertEqual(self.server.subtract(x=42, y=23), 19)
         responses.reset()
 
+        # rpc call with a mapping type
+        def callback3(request):
+            request_message = json.loads(request.body)
+            self.assertEqual(request_message["params"], {'foo': 'bar'})
+            return (200, {}, u'{"jsonrpc": "2.0", "result": null}')
+
+        responses.add_callback(
+            responses.POST, 'http://mock/xmlrpc',
+            content_type='application/json',
+            callback=callback3,
+        )
+        self.server.foobar({'foo': 'bar'})
+        responses.reset()
+
     @responses.activate
     def test_notification(self):
         # Verify that we ignore the server response

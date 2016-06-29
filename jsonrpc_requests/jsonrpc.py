@@ -2,6 +2,7 @@ import random
 import sys
 import json
 import functools
+import collections
 
 import requests
 
@@ -85,6 +86,13 @@ class Server(object):
         is_notification = kwargs.pop('_notification', False)
         if args and kwargs:
             raise ProtocolError('JSON-RPC spec forbids mixing arguments and keyword arguments')
+
+        # from the specs:
+        # "If resent, parameters for the rpc call MUST be provided as a Structured value.
+        #  Either by-position through an Array or by-name through an Object."
+        if len(args) == 1 and isinstance(args[0], collections.Mapping):
+            args = dict(args[0])
+
         return self.send_request(method_name, is_notification, args or kwargs)
 
 

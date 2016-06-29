@@ -29,6 +29,7 @@ Usage
     server = Server('http://localhost:8080')
     server.foo(1, 2)
     server.foo(bar=1, baz=2)
+    server.foo({'foo': 'bar'})
     server.foo.bar(baz=1, qux=2)
 
 A notification:
