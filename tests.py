@@ -9,7 +9,7 @@ import requests
 import requests.exceptions
 import responses
 
-from jsonrpc_requests import Server, ProtocolError, TransportError
+from jsonrpc_async import Server, ProtocolError, TransportError
 
 try:
     # python 3.3

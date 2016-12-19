@@ -8,26 +8,25 @@ except ImportError:
     raise
 
 setup(
-    name='jsonrpc-requests',
-    version='0.3',
-    author='Giuseppe Ciotta',
-    author_email='gciotta@gmail.com',
-    packages=('jsonrpc_requests',),
+    name='jsonrpc-async',
+    version='0.1',
+    author='Adam Mills',
+    author_email='adam@armills.info',
+    packages=('jsonrpc_async',),
     license='BSD',
-    keywords='json-rpc requests',
-    url='http://github.com/gciotta/jsonrpc-requests',
-    description='''A JSON-RPC client library, backed by requests''',
+    keywords='json-rpc async asyncio',
+    url='http://github.com/gciotta/jsonrpc-async',
+    description='''A JSON-RPC client library for asyncio''',
     long_description=open('README.rst').read(),
-    install_requires=('requests',),
+    install_requires=(),
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries',
         'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 
 )

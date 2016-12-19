@@ -1,28 +1,23 @@
-jsonrpc-requests: a compact JSON-RPC client library backed by `requests  <http://python-requests.org>`_
+jsonrpc-async: a compact JSON-RPC client library for asyncio
 =======================================================================================================
 
-.. image:: https://travis-ci.org/gciotta/jsonrpc-requests.svg
-    :target: https://travis-ci.org/gciotta/jsonrpc-requests
-.. image:: https://coveralls.io/repos/gciotta/jsonrpc-requests/badge.svg
-    :target: https://coveralls.io/r/gciotta/jsonrpc-requests
+.. image:: https://travis-ci.org/armills/jsonrpc-async.svg
+    :target: https://travis-ci.org/armills/jsonrpc-async
+.. image:: https://coveralls.io/repos/armills/jsonrpc-async/badge.svg
+    :target: https://coveralls.io/r/armills/jsonrpc-async
 
-This is a compact (~100 SLOC) and simple JSON-RPC client implementation written while debugging a picky server.
+This is a compact and simple JSON-RPC client implementation for asyncio python code. This code is forked from https://github.com/gciotta/jsonrpc-async
 
 Main Features
 -------------
 
-* Python 2.7, 3.4 & 3.5 compatible
-* Exposes requests options
+* Python 3.4 & 3.5 compatible
 * Supports nested namespaces (eg. `app.users.getUsers()`)
 * 100% test coverage
 
-TODO
-----
-
-* Batch requests (http://www.jsonrpc.org/specification#batch)
-
 Usage
 -----
+TODO
 .. code-block:: python
 
     from jsonrpc_requests import Server
@@ -64,6 +59,7 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Credits
 -------
+`@gciotta <https://github.com/gciotta>`_ for creating the base project `jsonrpc-requests <https://github.com/gciotta/jsonrpc-requests>`_.
 `@mbroadst <https://github.com/mbroadst>`_ for providing full support for nested method calls, JSON-RPC RFC
 compliance and other improvements.
 
