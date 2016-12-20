@@ -1,7 +1,12 @@
 language: python
+python:
+  - "3.4"
+  - "3.5"
 install:
   - pip install -qr requirements-test.txt
 script:
   - coverage run tests.py
+notifications:
+  email: false
 after_success:
   coveralls

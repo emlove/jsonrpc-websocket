@@ -3,3 +3,4 @@ coverage==4.1
 coveralls==1.1
 responses==0.5.1
 mock==2.0.0 # this is not actually needed for python3
+pytest-aiohttp==0.1.3

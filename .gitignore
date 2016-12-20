@@ -3,3 +3,5 @@ dist
 *.egg-info
 .tox
 .idea
+*.swp
+__pycache__

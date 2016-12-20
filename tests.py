@@ -1,13 +1,14 @@
+import asyncio
 import unittest
 import random
 import json
 import inspect
 import os
 
+import aiohttp
+import aiohttp.web
+from aiohttp.test_utils import TestClient, unittest_run_loop, setup_test_loop, teardown_test_loop
 import pep8
-import requests
-import requests.exceptions
-import responses
 
 from jsonrpc_async import Server, ProtocolError, TransportError
 
@@ -17,25 +18,51 @@ try:
 except ImportError:
     from mock import Mock
 
+class JsonTestClient(aiohttp.test_utils.TestClient):
+    def __init__(self, app_or_server):
+        super().__init__(app_or_server)
+        self.request_callback = None
+
+    def request(self, method, path, *args, **kwargs):
+        if callable(self.request_callback):
+            self.request_callback(method, path, *args, **kwargs)
+        return super().request(method, path, *args, **kwargs)
+
 class TestCase(unittest.TestCase):
     def assertSameJSON(self, json1, json2):
         """Tells whether two json strings, once decoded, are the same dictionary"""
         return self.assertDictEqual(json.loads(json1), json.loads(json2))
 
     def assertRaisesRegex(self, *args, **kwargs):
-        if hasattr(super(TestCase, self), 'assertRaisesRegex'):
-            # python 3.3
-            return super(TestCase, self).assertRaisesRegex(*args, **kwargs)
-        else:
-            # python 2.7
-            return self.assertRaisesRegexp(*args, **kwargs)
+        return super(TestCase, self).assertRaisesRegex(*args, **kwargs)
 
 
 class TestJSONRPCClient(TestCase):
 
     def setUp(self):
+        self.loop = setup_test_loop()
+        self.app = self.get_app(self.loop)
+
+        @asyncio.coroutine
+        def create_client(app):
+            return JsonTestClient(app)
+
+        self.client = self.loop.run_until_complete(create_client(self.app))
+        self.loop.run_until_complete(self.client.start_server())
         random.randint = Mock(return_value=1)
-        self.server = Server('http://mock/xmlrpc')
+        self.server = Server('/xmlrpc', session=self.client)
+
+    def tearDown(self):
+        self.loop.run_until_complete(self.client.close())
+        teardown_test_loop(self.loop)
+
+    def get_app(self, loop):
+        @asyncio.coroutine
+        def response_func(request):
+            return (yield from self.handler(request))
+        app = aiohttp.web.Application(loop=loop)
+        app.router.add_post('/xmlrpc', response_func)
+        return app
 
     def test_length(self):
         """Verify that this library is really smaller than 100 lines, as stated in README.rst"""
@@ -48,7 +75,7 @@ class TestJSONRPCClient(TestCase):
 
         source_files = []
         project_dir = os.path.dirname(os.path.abspath(__file__))
-        package_dir = os.path.join(project_dir, 'jsonrpc_requests')
+        package_dir = os.path.join(project_dir, 'jsonrpc_async')
         for root, directories, filenames in os.walk(package_dir):
             source_files.extend([os.path.join(root, f) for f in filenames if f.endswith('.py')])
 
@@ -84,148 +111,153 @@ class TestJSONRPCClient(TestCase):
         self.assertEqual(protoerror.exception.args[0], -32601)
         self.assertEqual(protoerror.exception.args[1], 'Method not found')
 
-    @responses.activate
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_send_request(self):
         # catch non-json responses
         with self.assertRaises(TransportError) as transport_error:
-            responses.add(responses.POST, 'http://mock/xmlrpc', body='not json', content_type='application/json')
-            self.server.send_request('my_method', is_notification=False, params=None)
+            @asyncio.coroutine
+            def handler(request):
+                return aiohttp.web.Response(text='not json', content_type='application/json')
+
+            self.handler = handler
+            yield from self.server.send_request('my_method', is_notification=False, params=None)
 
         self.assertEqual(transport_error.exception.args[0], 'Cannot deserialize response body')
         self.assertIsInstance(transport_error.exception.args[1], ValueError)
-        responses.reset()
 
         # catch non-200 responses
         with self.assertRaisesRegex(TransportError, '404'):
-            responses.add(responses.POST, 'http://mock/xmlrpc', body='{}', content_type='application/json', status=404)
-            self.server.send_request('my_method', is_notification=False, params=None)
-        responses.reset()
+            @asyncio.coroutine
+            def handler(request):
+                return aiohttp.web.Response(text='{}', content_type='application/json', status=404)
 
-        # catch requests own exception
-        with self.assertRaisesRegex(TransportError, 'Requests exception'):
-            def callback(request):
-                raise requests.RequestException('Requests exception')
-            responses.add_callback(
-                responses.POST, 'http://mock/xmlrpc', content_type='application/json', callback=callback,
-            )
-            self.server.send_request('my_method', is_notification=False, params=None)
-        responses.reset()
+            self.handler = handler
+            yield from self.server.send_request('my_method', is_notification=False, params=None)
 
         # a notification
-        responses.add(responses.POST, 'http://mock/xmlrpc', body='we dont care about this',
-                      content_type='application/json')
-        self.server.send_request('my_notification', is_notification=True, params=None)
-        responses.reset()
+        @asyncio.coroutine
+        def handler(request):
+            return aiohttp.web.Response(text='we dont care about this', content_type='application/json')
 
+        self.handler = handler
+        yield from self.server.send_request('my_notification', is_notification=True, params=None)
+
+        # catch aiohttp own exception
+        with self.assertRaisesRegex(TransportError, 'aiohttp exception'):
+            def callback(method, path, *args, **kwargs):
+                raise aiohttp.ClientResponseError('aiohttp exception')
+            self.client.request_callback = callback
+            yield from self.server.send_request('my_method', is_notification=False, params=None)
+
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_exception_passthrough(self):
         with self.assertRaises(TransportError) as transport_error:
-            s = Server('http://host-doesnt-exist')
-            s.foo()
+            def callback(method, path, *args, **kwargs):
+                raise aiohttp.ClientOSError('aiohttp exception')
+            self.client.request_callback = callback
+            yield from self.server.foo()
         self.assertEqual(transport_error.exception.args[0], "Error calling method 'foo'")
-        self.assertIsInstance(transport_error.exception.args[1], requests.exceptions.RequestException)
+        self.assertIsInstance(transport_error.exception.args[1], aiohttp.ClientOSError)
 
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_forbid_private_methods(self):
         """Test that we can't call private class methods (those starting with '_')"""
-        s = Server('http://host-doesnt-exist')
         with self.assertRaises(AttributeError):
-            s._foo()
+            yield from self.server._foo()
 
         # nested private method call
         with self.assertRaises(AttributeError):
-            s.foo.bar._baz()
+            yield from self.server.foo.bar._baz()
 
-    @responses.activate
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_headers_passthrough(self):
         """Test that we correctly send RFC-defined headers and merge them with user defined ones"""
-        def callback(request):
+        @asyncio.coroutine
+        def handler(request):
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": true, "id": 1}', content_type='application/json')
+
+        self.handler = handler
+        def callback(method, path, *args, **kwargs):
             expected_headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json-rpc',
                 'X-TestCustomHeader': '1'
             }
-            self.assertTrue(set(expected_headers.items()).issubset(set(request.headers.items())))
-            return 200, {}, u'{"jsonrpc": "2.0", "result": true, "id": 1}'
+            self.assertTrue(set(expected_headers.items()).issubset(set(kwargs['headers'].items())))
 
-        responses.add_callback(
-            responses.POST, 'http://mock/xmlrpc', content_type='application/json', callback=callback,
-        )
-        s = Server('http://mock/xmlrpc', headers={'X-TestCustomHeader': '1'})
-        s.foo()
+        self.client.request_callback = callback
+        s = Server('/xmlrpc', session=self.client, headers={'X-TestCustomHeader': '1'})
+        yield from s.foo()
 
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_method_call(self):
         """mixing *args and **kwargs is forbidden by the spec"""
         with self.assertRaisesRegex(ProtocolError, 'JSON-RPC spec forbids mixing arguments and keyword arguments'):
-            self.server.testmethod(1, 2, a=1, b=2)
+            yield from self.server.testmethod(1, 2, a=1, b=2)
 
-    @responses.activate
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_method_nesting(self):
         """Test that we correctly nest namespaces"""
-        def callback(request):
-            request_message = json.loads(request.body)
+        @asyncio.coroutine
+        def handler(request):
+            request_message = yield from request.json()
             if (request_message["params"][0] == request_message["method"]):
-                return (200, {}, u'{"jsonrpc": "2.0", "result": true, "id": 1}')
+                return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": true, "id": 1}', content_type='application/json')
             else:
-                return (200, {}, u'{"jsonrpc": "2.0", "result": false, "id": 1}')
+                return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": false, "id": 1}', content_type='application/json')
 
-        responses.add_callback(
-            responses.POST, 'http://mock/xmlrpc', content_type='application/json', callback=callback,
-        )
+        self.handler = handler
 
-        self.assertEqual(self.server.nest.testmethod("nest.testmethod"), True)
-        self.assertEqual(self.server.nest.testmethod.some.other.method("nest.testmethod.some.other.method"), True)
+        self.assertEqual((yield from self.server.nest.testmethod("nest.testmethod")), True)
+        self.assertEqual((yield from self.server.nest.testmethod.some.other.method("nest.testmethod.some.other.method")), True)
 
-    @responses.activate
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_calls(self):
         # rpc call with positional parameters:
-        def callback1(request):
-            request_message = json.loads(request.body)
+        @asyncio.coroutine
+        def handler1(request):
+            request_message = yield from request.json()
             self.assertEqual(request_message["params"], [42, 23])
-            return (200, {}, u'{"jsonrpc": "2.0", "result": 19, "id": 1}')
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": 19, "id": 1}', content_type='application/json')
 
-        responses.add_callback(
-            responses.POST, 'http://mock/xmlrpc',
-            content_type='application/json',
-            callback=callback1,
-        )
-        self.assertEqual(self.server.subtract(42, 23), 19)
-        responses.reset()
+        self.handler = handler1
+        self.assertEqual((yield from self.server.subtract(42, 23)), 19)
 
-        # rpc call with named parameters
-        def callback2(request):
-            request_message = json.loads(request.body)
+        @asyncio.coroutine
+        def handler2(request):
+            request_message = yield from request.json()
             self.assertEqual(request_message["params"], {'y': 23, 'x': 42})
-            return (200, {}, u'{"jsonrpc": "2.0", "result": 19, "id": 1}')
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": 19, "id": 1}', content_type='application/json')
 
-        responses.add_callback(
-            responses.POST, 'http://mock/xmlrpc',
-            content_type='application/json',
-            callback=callback2,
-        )
-        self.assertEqual(self.server.subtract(x=42, y=23), 19)
-        responses.reset()
+        self.handler = handler2
+        self.assertEqual((yield from self.server.subtract(x=42, y=23)), 19)
 
-        # rpc call with a mapping type
-        def callback3(request):
-            request_message = json.loads(request.body)
+        @asyncio.coroutine
+        def handler3(request):
+            request_message = yield from request.json()
             self.assertEqual(request_message["params"], {'foo': 'bar'})
-            return (200, {}, u'{"jsonrpc": "2.0", "result": null}')
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": null}', content_type='application/json')
 
-        responses.add_callback(
-            responses.POST, 'http://mock/xmlrpc',
-            content_type='application/json',
-            callback=callback3,
-        )
-        self.server.foobar({'foo': 'bar'})
-        responses.reset()
+        self.handler = handler3
+        yield from self.server.foobar({'foo': 'bar'})
 
-    @responses.activate
+    @unittest_run_loop
+    @asyncio.coroutine
     def test_notification(self):
         # Verify that we ignore the server response
-        responses.add(responses.POST, 'http://mock/xmlrpc',
-                      body='{"jsonrpc": "2.0", "result": 19, "id": 3}',
-                      content_type='application/json')
-        self.assertIsNone(self.server.subtract(42, 23, _notification=True))
-        responses.reset()
+        @asyncio.coroutine
+        def handler(request):
+            return aiohttp.web.Response(text='{"jsonrpc": "2.0", "result": 19, "id": 1}', content_type='application/json')
+
+        self.handler = handler
+        self.assertIsNone((yield from self.server.subtract(42, 23, _notification=True)))
 
 
 if __name__ == '__main__':

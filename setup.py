@@ -15,10 +15,10 @@ setup(
     packages=('jsonrpc_async',),
     license='BSD',
     keywords='json-rpc async asyncio',
-    url='http://github.com/gciotta/jsonrpc-async',
+    url='http://github.com/armills/jsonrpc-async',
     description='''A JSON-RPC client library for asyncio''',
     long_description=open('README.rst').read(),
-    install_requires=(),
+    install_requires=['aiohttp>=1.1.6'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
