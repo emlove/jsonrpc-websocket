@@ -17,6 +17,8 @@ Main Features
 
 Usage
 -----
+It is recommended to manage the aiohttp ClientSession object externally and pass it to the Server constructor. `(See the aiohttp documentation.) <https://aiohttp.readthedocs.io/en/stable/client_reference.html#aiohttp.ClientSession>`_ If not passed to Server, a ClientSession object will be created automatically.
+
 Execute remote JSON-RPC functions
 
 .. code-block:: python

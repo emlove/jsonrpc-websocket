@@ -18,7 +18,10 @@ setup(
     url='http://github.com/armills/jsonrpc-async',
     description='''A JSON-RPC client library for asyncio''',
     long_description=open('README.rst').read(),
-    install_requires=['aiohttp>=1.1.6'],
+    install_requires=[
+        'jsonrpc-base==0.1',
+        'aiohttp>=1.1.6',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
