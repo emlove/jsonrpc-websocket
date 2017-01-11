@@ -50,7 +50,7 @@ class TestJSONRPCClient(TestCase):
         self.client = self.loop.run_until_complete(create_client(self.app))
         self.loop.run_until_complete(self.client.start_server())
         random.randint = Mock(return_value=1)
-        self.server = Server('/xmlrpc', session=self.client)
+        self.server = Server('/xmlrpc', session=self.client, timeout=0.2)
 
     def tearDown(self):
         self.loop.run_until_complete(self.client.close())
@@ -114,6 +114,22 @@ class TestJSONRPCClient(TestCase):
     @unittest_run_loop
     @asyncio.coroutine
     def test_send_request(self):
+        # catch timeout responses
+        with self.assertRaises(TransportError) as transport_error:
+            @asyncio.coroutine
+            def handler(request):
+                try:
+                    yield from asyncio.sleep(10, loop=self.loop)
+                except asyncio.CancelledError:
+                    # Event loop will be terminated before sleep finishes
+                    pass
+                return aiohttp.web.Response(text='{}', content_type='application/json')
+
+            self.handler = handler
+            yield from self.server.send_request('my_method', is_notification=False, params=None)
+
+        self.assertIsInstance(transport_error.exception.args[1], asyncio.TimeoutError)
+
         # catch non-json responses
         with self.assertRaises(TransportError) as transport_error:
             @asyncio.coroutine

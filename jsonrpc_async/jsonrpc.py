@@ -22,7 +22,7 @@ class Server(jsonrpc_base.Server):
         request_body = self.serialize(method_name, params, is_notification)
         try:
             response = yield from self.request(data=request_body)
-        except (aiohttp.ClientResponseError, aiohttp.ClientOSError) as exc:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
             raise TransportError('Error calling method %r' % method_name, exc)
 
         try:
