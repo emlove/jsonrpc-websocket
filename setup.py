@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
     name='jsonrpc-async',
-    version='0.2',
+    version='0.3',
     author='Adam Mills',
     author_email='adam@armills.info',
     packages=('jsonrpc_async',),
@@ -19,7 +19,7 @@ setup(
     description='''A JSON-RPC client library for asyncio''',
     long_description=open('README.rst').read(),
     install_requires=[
-        'jsonrpc-base==0.1',
+        'jsonrpc-base==0.2',
         'aiohttp>=1.1.6',
     ],
     classifiers=[

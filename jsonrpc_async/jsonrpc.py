@@ -10,31 +10,35 @@ class Server(jsonrpc_base.Server):
     """A connection to a HTTP JSON-RPC server, backed by aiohttp"""
 
     def __init__(self, url, session=None, **post_kwargs):
-        self.session = session or aiohttp.ClientSession()
+        super().__init__()
+        session = session or aiohttp.ClientSession()
         post_kwargs['headers'] = post_kwargs.get('headers', {})
-        post_kwargs['headers']['Content-Type'] = post_kwargs['headers'].get('Content-Type', 'application/json')
-        post_kwargs['headers']['Accept'] = post_kwargs['headers'].get('Accept', 'application/json-rpc')
-        self.request = functools.partial(self.session.post, url, **post_kwargs)
+        post_kwargs['headers']['Content-Type'] = post_kwargs['headers'].get(
+            'Content-Type', 'application/json')
+        post_kwargs['headers']['Accept'] = post_kwargs['headers'].get(
+            'Accept', 'application/json-rpc')
+        self._request = functools.partial(session.post, url, **post_kwargs)
 
     @asyncio.coroutine
-    def send_request(self, method_name, is_notification, params):
-        """Issue the HTTP request to the server and return the method result (if not a notification)"""
-        request_body = self.serialize(method_name, params, is_notification)
+    def send_message(self, message):
+        """Send the HTTP message to the server and return the message response.
+
+        No result is returned if message is a notification.
+        """
         try:
-            response = yield from self.request(data=request_body)
+            response = yield from self._request(data=message.serialize())
         except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
-            raise TransportError('Error calling method %r' % method_name, exc)
+            raise TransportError('Transport Error', message, exc)
 
         try:
             if response.status != 200:
-                raise TransportError('HTTP %d %s' % (response.status, response.reason))
+                raise TransportError('HTTP %d %s' % (response.status, response.reason), message)
 
-            if not is_notification:
-                try:
-                    parsed = yield from response.json()
-                except ValueError as value_error:
-                    raise TransportError('Cannot deserialize response body', value_error)
+            try:
+                response_text = yield from response.text()
+            except ValueError as value_error:
+                raise TransportError('Cannot deserialize response body', message, value_error)
 
-                return self.parse_result(parsed)
+            return message.parse_response(response_text)
         finally:
             yield from response.release()
