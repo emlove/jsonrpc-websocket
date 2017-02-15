@@ -8,19 +8,19 @@ except ImportError:
     raise
 
 setup(
-    name='jsonrpc-async',
-    version='0.3',
+    name='jsonrpc-websocket',
+    version='0.1',
     author='Adam Mills',
     author_email='adam@armills.info',
-    packages=('jsonrpc_async',),
+    packages=('jsonrpc_websocket',),
     license='BSD',
-    keywords='json-rpc async asyncio',
-    url='http://github.com/armills/jsonrpc-async',
-    description='''A JSON-RPC client library for asyncio''',
+    keywords='json-rpc async asyncio websocket',
+    url='http://github.com/armills/jsonrpc-websocket',
+    description='''A JSON-RPC websocket client library for asyncio''',
     long_description=open('README.rst').read(),
     install_requires=[
-        'jsonrpc-base==0.2',
-        'aiohttp>=1.1.6',
+        'jsonrpc-base==1.0',
+        'aiohttp>=1.3.1',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

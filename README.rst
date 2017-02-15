@@ -1,12 +1,12 @@
-jsonrpc-async: a compact JSON-RPC client library for asyncio
+jsonrpc-websocket: a compact JSON-RPC websocket client library for asyncio
 =======================================================================================================
 
-.. image:: https://travis-ci.org/armills/jsonrpc-async.svg
-    :target: https://travis-ci.org/armills/jsonrpc-async
-.. image:: https://coveralls.io/repos/armills/jsonrpc-async/badge.svg
-    :target: https://coveralls.io/r/armills/jsonrpc-async
+.. image:: https://travis-ci.org/armills/jsonrpc-websocket.svg
+    :target: https://travis-ci.org/armills/jsonrpc-websocket
+.. image:: https://coveralls.io/repos/armills/jsonrpc-websocket/badge.svg
+    :target: https://coveralls.io/r/armills/jsonrpc-websocket
 
-This is a compact and simple JSON-RPC client implementation for asyncio python code. This code is forked from https://github.com/gciotta/jsonrpc-requests
+This is a compact and simple JSON-RPC websocket client implementation for asyncio python code. This code is forked from https://github.com/gciotta/jsonrpc-requests
 
 Main Features
 -------------
@@ -24,17 +24,21 @@ Execute remote JSON-RPC functions
 .. code-block:: python
 
     import asyncio
-    from jsonrpc_async import Server
+    from jsonrpc_websocket import Server
 
     @asyncio.coroutine
     def routine():
-        server = Server('http://localhost:8080')
+        server = Server('ws://localhost:9090')
         try:
+            yield from server.ws_connect()
+            loop.create_task(server.ws_loop())
+
             yield from server.foo(1, 2)
             yield from server.foo(bar=1, baz=2)
             yield from server.foo({'foo': 'bar'})
             yield from server.foo.bar(baz=1, qux=2)
         finally:
+            yield from server.close()
             yield from server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
@@ -44,14 +48,42 @@ A notification
 .. code-block:: python
 
     import asyncio
-    from jsonrpc_async import Server
+    from jsonrpc_websocket import Server
 
     @asyncio.coroutine
     def routine():
-        server = Server('http://localhost:8080')
+        server = Server('ws://localhost:9090')
         try:
+            yield from server.ws_connect()
+            loop.create_task(server.ws_loop())
+
             yield from server.foo(bar=1, _notification=True)
         finally:
+            yield from server.close()
+            yield from server.session.close()
+
+    asyncio.get_event_loop().run_until_complete(routine())
+
+Handle requests from server to client
+
+.. code-block:: python
+
+    import asyncio
+    from jsonrpc_websocket import Server
+
+    def client_method(arg1, arg2):
+        return arg1 + arg2
+
+    @asyncio.coroutine
+    def routine():
+        server = Server('ws://localhost:9090')
+        # client_method is called when server requests method 'namespace.client_method'
+        server.namespace.client_method = client_method
+        try:
+            yield from server.ws_connect()
+            yield from server.ws_loop()
+        finally:
+            yield from server.close()
             yield from server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
@@ -62,17 +94,21 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
 
     import asyncio
     import aiohttp
-    from jsonrpc_async import Server
+    from jsonrpc_websocket import Server
 
     @asyncio.coroutine
     def routine():
         server = Server(
-            'http://localhost:8080',
+            'ws://localhost:9090',
             auth=aiohttp.BasicAuth('user', 'pass'),
             headers={'x-test2': 'true'})
         try:
+            yield from server.ws_connect()
+            loop.create_task(server.ws_loop())
+
             yield from server.foo()
         finally:
+            yield from server.close()
             yield from server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
@@ -83,16 +119,20 @@ Pass through aiohttp exceptions
 
     import asyncio
     import aiohttp
-    from jsonrpc_async import Server
+    from jsonrpc_websocket import Server
 
     @asyncio.coroutine
     def routine():
-        server = Server('http://unknown-host')
+        server = Server('ws://unknown-host')
         try:
+            yield from server.ws_connect()
+            loop.create_task(server.ws_loop())
+
             yield from server.foo()
         except TransportError as transport_error:
             print(transport_error.args[1]) # this will hold a aiohttp exception instance
         finally:
+            yield from server.close()
             yield from server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())

@@ -1,4 +1,4 @@
 [run]
 branch = True
 source =
-	jsonrpc_async
+	jsonrpc_websocket
