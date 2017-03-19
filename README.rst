@@ -31,7 +31,6 @@ Execute remote JSON-RPC functions
         server = Server('ws://localhost:9090')
         try:
             yield from server.ws_connect()
-            loop.create_task(server.ws_loop())
 
             yield from server.foo(1, 2)
             yield from server.foo(bar=1, baz=2)
@@ -55,7 +54,6 @@ A notification
         server = Server('ws://localhost:9090')
         try:
             yield from server.ws_connect()
-            loop.create_task(server.ws_loop())
 
             yield from server.foo(bar=1, _notification=True)
         finally:
@@ -81,7 +79,6 @@ Handle requests from server to client
         server.namespace.client_method = client_method
         try:
             yield from server.ws_connect()
-            yield from server.ws_loop()
         finally:
             yield from server.close()
             yield from server.session.close()
@@ -104,7 +101,6 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
             headers={'x-test2': 'true'})
         try:
             yield from server.ws_connect()
-            loop.create_task(server.ws_loop())
 
             yield from server.foo()
         finally:
@@ -126,7 +122,6 @@ Pass through aiohttp exceptions
         server = Server('ws://unknown-host')
         try:
             yield from server.ws_connect()
-            loop.create_task(server.ws_loop())
 
             yield from server.foo()
         except TransportError as transport_error:

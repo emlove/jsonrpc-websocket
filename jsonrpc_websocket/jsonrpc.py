@@ -49,7 +49,7 @@ class Server(jsonrpc_base.Server):
     @asyncio.coroutine
     def ws_connect(self):
         """Connect to the websocket server."""
-        if self._client is not None:
+        if self.connected:
             raise TransportError('Connection already open.')
 
         try:
@@ -58,9 +58,10 @@ class Server(jsonrpc_base.Server):
         except (aiohttp.ClientError, aiohttp.DisconnectedError,
                 aiohttp.HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
+        return self.session.loop.create_task(self._ws_loop())
 
     @asyncio.coroutine
-    def ws_loop(self):
+    def _ws_loop(self):
         """Listen for messages from the websocket server."""
         msg = None
         try:
@@ -93,9 +94,15 @@ class Server(jsonrpc_base.Server):
     @asyncio.coroutine
     def close(self):
         """Returns a coroutine and must be run in the event loop."""
-        if self._client:
+        if self.connected:
             yield from self._client.close()
             self._client = None
+
+    @property
+    def connected(self):
+        """Websocket server is connected."""
+        return self._client is not None
+
 
 class PendingMessage(object):
     """Wait for response of pending message."""
