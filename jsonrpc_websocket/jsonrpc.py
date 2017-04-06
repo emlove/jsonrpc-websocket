@@ -1,6 +1,8 @@
 import asyncio
 
 import aiohttp
+from aiohttp import ClientError
+from aiohttp.http_exceptions import HttpProcessingError
 import async_timeout
 import jsonrpc_base
 from jsonrpc_base import JSONRPCError, TransportError, ProtocolError
@@ -42,8 +44,7 @@ class Server(jsonrpc_base.Server):
             else:
                 response = None
             return message.parse_response(response)
-        except (aiohttp.ClientError, aiohttp.DisconnectedError,
-                aiohttp.HttpProcessingError, asyncio.TimeoutError) as exc:
+        except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
 
     @asyncio.coroutine
@@ -55,8 +56,7 @@ class Server(jsonrpc_base.Server):
         try:
             self._client = yield from self.session.ws_connect(
                 self._url, **self._connect_kwargs)
-        except (aiohttp.ClientError, aiohttp.DisconnectedError,
-                aiohttp.HttpProcessingError, asyncio.TimeoutError) as exc:
+        except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
         return self.session.loop.create_task(self._ws_loop())
 
@@ -83,8 +83,7 @@ class Server(jsonrpc_base.Server):
                     break
                 elif msg.type == aiohttp.WSMsgType.ERROR:
                     break
-        except (aiohttp.ClientError, aiohttp.DisconnectedError,
-                aiohttp.HttpProcessingError, asyncio.TimeoutError) as exc:
+        except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
         finally:
             yield from self.close()

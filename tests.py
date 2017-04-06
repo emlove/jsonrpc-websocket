@@ -8,7 +8,7 @@ import unittest
 
 import aiohttp
 import aiohttp.web
-from aiohttp.test_utils import TestClient, unittest_run_loop, setup_test_loop, teardown_test_loop
+from aiohttp.test_utils import unittest_run_loop, setup_test_loop, teardown_test_loop
 import pep8
 
 import jsonrpc_base
