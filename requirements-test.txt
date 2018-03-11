@@ -3,5 +3,5 @@ coverage==4.1
 coveralls==1.1
 mock==2.0.0 # this is not actually needed for python3
 jsonrpc-base==1.0
-aiohttp>=2.0.0
+aiohttp>=3.0.0
 pytest-aiohttp==0.1.3

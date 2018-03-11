@@ -37,6 +37,7 @@ class JsonTestServer():
         self._closed = False
         self.receive_side_effect = None
 
+    @asyncio.coroutine
     def send_str(self, data):
         self.send_handler(self, data)
 

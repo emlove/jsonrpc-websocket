@@ -20,7 +20,7 @@ setup(
     long_description=open('README.rst').read(),
     install_requires=[
         'jsonrpc-base==1.0',
-        'aiohttp>=2.0.0',
+        'aiohttp>=3.0.0',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
