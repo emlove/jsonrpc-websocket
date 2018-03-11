@@ -9,7 +9,7 @@ except ImportError:
 
 setup(
     name='jsonrpc-websocket',
-    version='0.5',
+    version='0.6',
     author='Adam Mills',
     author_email='adam@armills.info',
     packages=('jsonrpc_websocket',),

@@ -136,6 +136,13 @@ Tests
 -----
 Install the Python tox package and run ``tox``, it'll test this package with various versions of Python.
 
+Changelog
+---------
+0.6 (March 11, 2018)
+~~~~~~~~~~~~~~
+- Minimum required version of aiohttp is now 3.0.
+- Support for Python 3.4 is now dropped.
+
 Credits
 -------
 `@gciotta <https://github.com/gciotta>`_ for creating the base project `jsonrpc-requests <https://github.com/gciotta/jsonrpc-requests>`_.
