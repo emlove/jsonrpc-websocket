@@ -35,7 +35,7 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Client is not connected.', message)
 
         try:
-            self._client.send_str(message.serialize())
+            yield from self._client.send_str(message.serialize())
             if message.response_id:
                 pending_message = PendingMessage(loop=self.session.loop)
                 self._pending_messages[message.response_id] = pending_message
