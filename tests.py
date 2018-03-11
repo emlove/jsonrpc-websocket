@@ -22,8 +22,7 @@ class JsonTestClient():
         self.loop = loop
         self.connect_side_effect = None
 
-    @asyncio.coroutine
-    def ws_connect(self, *args, **kwargs):
+    async def ws_connect(self, *args, **kwargs):
         if self.connect_side_effect:
             self.connect_side_effect()
         self.test_server = JsonTestServer(self.loop)
@@ -37,8 +36,7 @@ class JsonTestServer():
         self._closed = False
         self.receive_side_effect = None
 
-    @asyncio.coroutine
-    def send_str(self, data):
+    async def send_str(self, data):
         self.send_handler(self, data)
 
     def test_receive(self, data):
@@ -50,15 +48,13 @@ class JsonTestServer():
     def test_error(self):
         self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.ERROR, 0, ''))
 
-    @asyncio.coroutine
-    def receive(self):
-        value = yield from self.receive_queue.get()
+    async def receive(self):
+        value = await self.receive_queue.get()
         if self.receive_side_effect:
             self.receive_side_effect()
         return (value)
 
-    @asyncio.coroutine
-    def close(self):
+    async def close(self):
         if not self._closed:
             self._closed = True
             self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, 0, ''))
@@ -115,8 +111,7 @@ class TestJSONRPCClient(TestCase):
         self.assertEqual(pending_message.response, 10)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_send_message(self):
+    async def test_send_message(self):
         # catch timeout responses
         with self.assertRaises(TransportError) as transport_error:
             def handler(server, data):
@@ -127,60 +122,53 @@ class TestJSONRPCClient(TestCase):
                     pass
 
             self.handler = handler
-            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
+            await self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
         self.assertIsInstance(transport_error.exception.args[1], asyncio.TimeoutError)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_client_closed(self):
-        yield from self.server.close()
+    async def test_client_closed(self):
+        await self.server.close()
         with self.assertRaisesRegex(TransportError, 'Client is not connected.'):
             def handler(server, data):
                 pass
             self.handler = handler
-            yield from self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
+            await self.server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_double_connect(self):
+    async def test_double_connect(self):
         with self.assertRaisesRegex(TransportError, 'Connection already open.'):
-            yield from self.server.ws_connect()
+            await self.server.ws_connect()
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_ws_error(self):
+    async def test_ws_error(self):
         self.client.test_server.test_error()
         with self.assertRaisesRegex(TransportError, 'Websocket error detected. Connection closed.'):
-            yield from self.ws_loop_future
+            await self.ws_loop_future
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_binary(self):
+    async def test_binary(self):
         self.client.test_server.test_binary()
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_message_not_json(self):
+    async def test_message_not_json(self):
         with self.assertRaises(TransportError) as transport_error:
             self.receive('not json')
-            yield from self.ws_loop_future
+            await self.ws_loop_future
         self.assertIsInstance(transport_error.exception.args[1], ValueError)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_connection_timeout(self):
+    async def test_connection_timeout(self):
         def bad_connect():
             raise aiohttp.ClientError("Test Error")
         self.client.connect_side_effect = bad_connect
-        yield from self.server.close()
+        await self.server.close()
         with self.assertRaises(TransportError) as transport_error:
-            yield from self.server.ws_connect()
+            await self.server.ws_connect()
         self.assertIsInstance(transport_error.exception.args[1], aiohttp.ClientError)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_server_request(self):
+    async def test_server_request(self):
         def test_method():
             return 1
         self.server.test_method = test_method
@@ -193,16 +181,14 @@ class TestJSONRPCClient(TestCase):
         self.receive('{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_server_notification(self):
+    async def test_server_notification(self):
         def test_method():
             pass
         self.server.test_method = test_method
         self.receive('{"jsonrpc": "2.0", "method": "test_method"}')
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_server_response_error(self):
+    async def test_server_response_error(self):
         def test_method():
             return 1
         self.server.test_method = test_method
@@ -213,12 +199,11 @@ class TestJSONRPCClient(TestCase):
         self.receive('{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
 
         with self.assertRaises(TransportError) as transport_error:
-            yield from self.ws_loop_future
+            await self.ws_loop_future
         self.assertIsInstance(transport_error.exception.args[1], aiohttp.ClientError)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_calls(self):
+    async def test_calls(self):
         # rpc call with positional parameters:
         def handler1(server, data):
             request = json.loads(data)
@@ -226,7 +211,7 @@ class TestJSONRPCClient(TestCase):
             server.test_receive('{"jsonrpc": "2.0", "result": 19, "id": 1}')
 
         self.handler = handler1
-        self.assertEqual((yield from self.server.subtract(42, 23)), 19)
+        self.assertEqual((await self.server.subtract(42, 23)), 19)
 
         def handler2(server, data):
             request = json.loads(data)
@@ -234,23 +219,22 @@ class TestJSONRPCClient(TestCase):
             server.test_receive('{"jsonrpc": "2.0", "result": 19, "id": 1}')
 
         self.handler = handler2
-        self.assertEqual((yield from self.server.subtract(x=42, y=23)), 19)
+        self.assertEqual((await self.server.subtract(x=42, y=23)), 19)
 
         def handler3(server, data):
             request = json.loads(data)
             self.assertEqual(request["params"], {'foo': 'bar'})
 
         self.handler = handler3
-        yield from self.server.foobar({'foo': 'bar'}, _notification=True)
+        await self.server.foobar({'foo': 'bar'}, _notification=True)
 
     @unittest_run_loop
-    @asyncio.coroutine
-    def test_notification(self):
+    async def test_notification(self):
         # Verify that we ignore the server response
         def handler(server, data):
             pass
         self.handler = handler
-        self.assertIsNone((yield from self.server.subtract(42, 23, _notification=True)))
+        self.assertIsNone((await self.server.subtract(42, 23, _notification=True)))
 
 
 if __name__ == '__main__':

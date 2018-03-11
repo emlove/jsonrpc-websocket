@@ -25,8 +25,7 @@ class Server(jsonrpc_base.Server):
         self._timeout = self._connect_kwargs.get('timeout')
         self._pending_messages = {}
 
-    @asyncio.coroutine
-    def send_message(self, message):
+    async def send_message(self, message):
         """Send the HTTP message to the server and return the message response.
 
         No result is returned if message is a notification.
@@ -35,11 +34,11 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Client is not connected.', message)
 
         try:
-            yield from self._client.send_str(message.serialize())
+            await self._client.send_str(message.serialize())
             if message.response_id:
                 pending_message = PendingMessage(loop=self.session.loop)
                 self._pending_messages[message.response_id] = pending_message
-                response = yield from pending_message.wait(self._timeout)
+                response = await pending_message.wait(self._timeout)
                 del self._pending_messages[message.response_id]
             else:
                 response = None
@@ -47,26 +46,24 @@ class Server(jsonrpc_base.Server):
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
 
-    @asyncio.coroutine
-    def ws_connect(self):
+    async def ws_connect(self):
         """Connect to the websocket server."""
         if self.connected:
             raise TransportError('Connection already open.')
 
         try:
-            self._client = yield from self.session.ws_connect(
+            self._client = await self.session.ws_connect(
                 self._url, **self._connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
         return self.session.loop.create_task(self._ws_loop())
 
-    @asyncio.coroutine
-    def _ws_loop(self):
+    async def _ws_loop(self):
         """Listen for messages from the websocket server."""
         msg = None
         try:
             while True:
-                msg = yield from self._client.receive()
+                msg = await self._client.receive()
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     try:
                         data = msg.json()
@@ -76,7 +73,7 @@ class Server(jsonrpc_base.Server):
                         request = jsonrpc_base.Request.parse(data)
                         response = self.receive_request(request)
                         if response:
-                            yield from self.send_message(response)
+                            await self.send_message(response)
                     else:
                         self._pending_messages[data['id']].response = data
                 elif msg.type == aiohttp.WSMsgType.CLOSED:
@@ -86,15 +83,14 @@ class Server(jsonrpc_base.Server):
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
         finally:
-            yield from self.close()
+            await self.close()
             if msg and msg.type == aiohttp.WSMsgType.ERROR:
                 raise TransportError('Websocket error detected. Connection closed.')
 
-    @asyncio.coroutine
-    def close(self):
-        """Returns a coroutine and must be run in the event loop."""
+    async def close(self):
+        """Close the connection to the websocket server."""
         if self.connected:
-            yield from self._client.close()
+            await self._client.close()
             self._client = None
 
     @property
@@ -111,10 +107,9 @@ class PendingMessage(object):
         self._event = asyncio.Event(loop=loop)
         self._response = None
 
-    @asyncio.coroutine
-    def wait(self, timeout=None):
+    async def wait(self, timeout=None):
         with async_timeout.timeout(timeout=timeout, loop=self._loop):
-            yield from self._event.wait()
+            await self._event.wait()
             return self._response
 
     @property
