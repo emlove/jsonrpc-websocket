@@ -26,19 +26,18 @@ Execute remote JSON-RPC functions
     import asyncio
     from jsonrpc_websocket import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('ws://localhost:9090')
         try:
-            yield from server.ws_connect()
+            await server.ws_connect()
 
-            yield from server.foo(1, 2)
-            yield from server.foo(bar=1, baz=2)
-            yield from server.foo({'foo': 'bar'})
-            yield from server.foo.bar(baz=1, qux=2)
+            await server.foo(1, 2)
+            await server.foo(bar=1, baz=2)
+            await server.foo({'foo': 'bar'})
+            await server.foo.bar(baz=1, qux=2)
         finally:
-            yield from server.close()
-            yield from server.session.close()
+            await server.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -49,16 +48,15 @@ A notification
     import asyncio
     from jsonrpc_websocket import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('ws://localhost:9090')
         try:
-            yield from server.ws_connect()
+            await server.ws_connect()
 
-            yield from server.foo(bar=1, _notification=True)
+            await server.foo(bar=1, _notification=True)
         finally:
-            yield from server.close()
-            yield from server.session.close()
+            await server.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -72,16 +70,15 @@ Handle requests from server to client
     def client_method(arg1, arg2):
         return arg1 + arg2
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('ws://localhost:9090')
         # client_method is called when server requests method 'namespace.client_method'
         server.namespace.client_method = client_method
         try:
-            yield from server.ws_connect()
+            await server.ws_connect()
         finally:
-            yield from server.close()
-            yield from server.session.close()
+            await server.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -93,19 +90,18 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
     import aiohttp
     from jsonrpc_websocket import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server(
             'ws://localhost:9090',
             auth=aiohttp.BasicAuth('user', 'pass'),
             headers={'x-test2': 'true'})
         try:
-            yield from server.ws_connect()
+            await server.ws_connect()
 
-            yield from server.foo()
+            await server.foo()
         finally:
-            yield from server.close()
-            yield from server.session.close()
+            await server.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -117,18 +113,17 @@ Pass through aiohttp exceptions
     import aiohttp
     from jsonrpc_websocket import Server
 
-    @asyncio.coroutine
-    def routine():
+    async def routine():
         server = Server('ws://unknown-host')
         try:
-            yield from server.ws_connect()
+            await server.ws_connect()
 
-            yield from server.foo()
+            await server.foo()
         except TransportError as transport_error:
             print(transport_error.args[1]) # this will hold a aiohttp exception instance
         finally:
-            yield from server.close()
-            yield from server.session.close()
+            await server.close()
+            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
