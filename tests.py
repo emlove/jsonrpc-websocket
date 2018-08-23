@@ -1,10 +1,10 @@
 import asyncio
 import inspect
 import json
-from mock import Mock
 import os
 import random
 import unittest
+from unittest.mock import Mock
 
 import aiohttp
 import aiohttp.web
