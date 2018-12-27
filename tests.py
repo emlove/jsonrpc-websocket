@@ -229,6 +229,38 @@ class TestJSONRPCClient(TestCase):
         await self.server.foobar({'foo': 'bar'}, _notification=True)
 
     @unittest_run_loop
+    async def test_simultaneous_calls(self):
+        # Test that calls can be delivered simultaneously, and can return out
+        # of order
+        def handler(server, data):
+            pass
+
+        self.handler = handler
+
+        random.randint = Mock(return_value=1)
+        task1 = self.loop.create_task(self.server.call1())
+        random.randint = Mock(return_value=2)
+        task2 = self.loop.create_task(self.server.call2())
+
+        self.assertFalse(task1.done())
+        self.assertFalse(task2.done())
+
+        self.receive('{"jsonrpc": "2.0", "result": 2, "id": 2}')
+        await task2
+
+        self.assertFalse(task1.done())
+        self.assertTrue(task2.done())
+
+        self.receive('{"jsonrpc": "2.0", "result": 1, "id": 1}')
+        await task1
+
+        self.assertTrue(task1.done())
+        self.assertTrue(task2.done())
+
+        self.assertEqual(1, task1.result())
+        self.assertEqual(2, task2.result())
+
+    @unittest_run_loop
     async def test_notification(self):
         # Verify that we ignore the server response
         def handler(server, data):
