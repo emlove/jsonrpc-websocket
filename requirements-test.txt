@@ -1,6 +1,6 @@
 pep8==1.7.0
 coverage==4.1
 coveralls==1.1
-jsonrpc-base>=1.0.2
+jsonrpc-base>=1.0.3
 aiohttp>=3.0.0
 pytest-aiohttp==0.1.3
