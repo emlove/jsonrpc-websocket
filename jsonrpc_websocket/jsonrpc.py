@@ -1,5 +1,6 @@
 import asyncio
 
+import json
 import aiohttp
 from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
@@ -64,9 +65,15 @@ class Server(jsonrpc_base.Server):
         try:
             while True:
                 msg = await self._client.receive()
-                if msg.type == aiohttp.WSMsgType.TEXT:
+                data = None
+                if msg.type == aiohttp.WSMsgType.BINARY:
                     try:
-                        data = msg.json()
+                        data = msg.data.decode()
+                    except Exception:
+                        continue
+                if msg.type == aiohttp.WSMsgType.TEXT or data:
+                    try:
+                        data = msg.json() if not data else json.loads(data)
                     except ValueError as exc:
                         raise TransportError('Error Parsing JSON', None, exc)
                     if 'method' in data:
