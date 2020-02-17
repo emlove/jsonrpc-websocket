@@ -133,6 +133,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+1.1.0 (February 17, 2020)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+- Support servers that send JSON-RPC requests as binary messages encoded with UTF-8 `(#5) <https://github.com/emlove/jsonrpc-websocket/pull/5>`_ `@shiaky <https://github.com/shiaky>`_
+
 1.0.2 (November 12, 2019)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.3

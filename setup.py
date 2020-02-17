@@ -9,14 +9,15 @@ except ImportError:
 
 setup(
     name='jsonrpc-websocket',
-    version='1.0.2',
-    author='Adam Mills',
-    author_email='adam@armills.info',
+    version='1.1.0',
+    author='Emily Mills',
+    author_email='emily@emlove.me',
     packages=('jsonrpc_websocket',),
     license='BSD',
     keywords='json-rpc async asyncio websocket',
     url='http://github.com/armills/jsonrpc-websocket',
     description='''A JSON-RPC websocket client library for asyncio''',
+    long_description_content_type='text/x-rst',
     long_description=open('README.rst').read(),
     install_requires=[
         'jsonrpc-base>=1.0.3',
