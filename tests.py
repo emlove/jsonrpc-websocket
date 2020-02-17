@@ -51,6 +51,9 @@ class JsonTestServer():
     def test_close(self):
         self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, 0, ''))
 
+    def test_ping(self):
+        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.PING, 0, ''))
+
     async def receive(self):
         value = await self.receive_queue.get()
         if self.receive_side_effect:
@@ -82,7 +85,8 @@ class TestJSONRPCClient(TestCase):
 
     def tearDown(self):
         if self.server.connected:
-            self.loop.run_until_complete(self.server.close())
+            self.client.test_server.test_close()
+            self.loop.run_until_complete(self.ws_loop_future)
         teardown_test_loop(self.loop)
 
     @property
@@ -170,6 +174,21 @@ class TestJSONRPCClient(TestCase):
         # if it's not valid we should just ignore it, and an exception should
         # not be thrown
         self.receive_binary(bytes((0xE0, 0x80, 0x80)))
+        self.client.test_server.test_close()
+        await self.ws_loop_future
+
+    @unittest_run_loop
+    async def test_message_binary_not_json(self):
+        # If we get a binary message, we should try to decode it as JSON, but
+        # if it's not valid we should just ignore it, and an exception should
+        # not be thrown
+        self.receive_binary('not json'.encode())
+        self.client.test_server.test_close()
+        await self.ws_loop_future
+
+    @unittest_run_loop
+    async def test_message_ping_ignored(self):
+        self.client.test_server.test_ping()
         self.client.test_server.test_close()
         await self.ws_loop_future
 

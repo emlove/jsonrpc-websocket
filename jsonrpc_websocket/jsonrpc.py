@@ -1,6 +1,6 @@
 import asyncio
-
 import json
+
 import aiohttp
 from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
@@ -65,28 +65,43 @@ class Server(jsonrpc_base.Server):
         try:
             while True:
                 msg = await self._client.receive()
-                data = None
+
+                if msg.type == aiohttp.WSMsgType.CLOSED:
+                    break
+                if msg.type == aiohttp.WSMsgType.ERROR:
+                    break
+
                 if msg.type == aiohttp.WSMsgType.BINARY:
                     try:
-                        data = msg.data.decode()
-                    except Exception:
+                        # If we get a binary message, try and decode it as a
+                        # UTF-8 JSON string, in case the server is sending
+                        # binary websocket messages. If it doens't decode we'll
+                        # ignore it since we weren't expecting binary messages
+                        # anyway
+                        data = json.loads(msg.data.decode())
+                    except ValueError:
                         continue
-                if msg.type == aiohttp.WSMsgType.TEXT or data:
+                elif msg.type == aiohttp.WSMsgType.TEXT:
                     try:
-                        data = msg.json() if not data else json.loads(data)
+                        data = msg.json()
                     except ValueError as exc:
                         raise TransportError('Error Parsing JSON', None, exc)
-                    if 'method' in data:
-                        request = jsonrpc_base.Request.parse(data)
-                        response = self.receive_request(request)
-                        if response:
-                            await self.send_message(response)
-                    else:
-                        self._pending_messages[data['id']].response = data
-                elif msg.type == aiohttp.WSMsgType.CLOSED:
-                    break
-                elif msg.type == aiohttp.WSMsgType.ERROR:
-                    break
+                else:
+                    # This is tested with test_message_ping_ignored, but
+                    # cpython's optimizations prevent coveragepy from detecting
+                    # that it's run
+                    # https://bitbucket.org/ned/coveragepy/issues/198/continue-marked-as-not-covered
+                    continue # pragma: no cover
+
+
+                if 'method' in data:
+                    request = jsonrpc_base.Request.parse(data)
+                    response = self.receive_request(request)
+                    if response:
+                        await self.send_message(response)
+                else:
+                    self._pending_messages[data['id']].response = data
+
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
         finally:

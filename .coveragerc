@@ -2,3 +2,6 @@
 branch = True
 source =
 	jsonrpc_websocket
+
+[report]
+show_missing = True
