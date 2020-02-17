@@ -15,7 +15,7 @@ setup(
     packages=('jsonrpc_websocket',),
     license='BSD',
     keywords='json-rpc async asyncio websocket',
-    url='http://github.com/armills/jsonrpc-websocket',
+    url='http://github.com/emlove/jsonrpc-websocket',
     description='''A JSON-RPC websocket client library for asyncio''',
     long_description_content_type='text/x-rst',
     long_description=open('README.rst').read(),

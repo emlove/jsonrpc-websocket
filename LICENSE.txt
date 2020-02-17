@@ -1,5 +1,5 @@
 Copyright (c) 2014 Giuseppe Ciotta <gciotta@gmail.com>
-Copyright (c) 2016 Adam Mills <adam@armills.info>
+Copyright (c) 2020 Emily Mills <emily@emlove.me>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

@@ -1,10 +1,10 @@
 jsonrpc-websocket: a compact JSON-RPC websocket client library for asyncio
 =======================================================================================================
 
-.. image:: https://travis-ci.org/armills/jsonrpc-websocket.svg
-    :target: https://travis-ci.org/armills/jsonrpc-websocket
-.. image:: https://coveralls.io/repos/armills/jsonrpc-websocket/badge.svg
-    :target: https://coveralls.io/r/armills/jsonrpc-websocket
+.. image:: https://travis-ci.org/emlove/jsonrpc-websocket.svg
+    :target: https://travis-ci.org/emlove/jsonrpc-websocket
+.. image:: https://coveralls.io/repos/emlove/jsonrpc-websocket/badge.svg
+    :target: https://coveralls.io/r/emlove/jsonrpc-websocket
 
 This is a compact and simple JSON-RPC websocket client implementation for asyncio python code. This code is forked from https://github.com/gciotta/jsonrpc-requests
 
