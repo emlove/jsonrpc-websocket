@@ -48,7 +48,7 @@ class JsonTestServer():
     def __init__(self, loop=None):
         self.loop = loop
         self.send_handler = None
-        self.receive_queue = asyncio.Queue(loop=loop)
+        self.receive_queue = asyncio.Queue()
         self._closed = False
         self.receive_side_effect = None
 
@@ -118,20 +118,25 @@ def test_pep8_conformance():
     result = pep8style.check_files(source_files)
     assert result.total_errors == 0
 
-def test_pending_message_response(event_loop):
-    pending_message = jsonrpc_websocket.jsonrpc.PendingMessage(loop=event_loop)
+def test_pending_message_response():
+    pending_message = jsonrpc_websocket.jsonrpc.PendingMessage()
     pending_message.response = 10
     assert pending_message.response == 10
 
-async def test_send_message(event_loop, server):
+async def test_send_message(server):
     # catch timeout responses
     with pytest.raises(TransportError) as transport_error:
         def handler(server, data):
             try:
-                asyncio.wait(asyncio.sleep(10, loop=event_loop))
+                sleep_coroutine = asyncio.sleep(10)
+                wait_coroutine = asyncio.wait(sleep_coroutine)
             except asyncio.CancelledError:
                 # event loop will be terminated before sleep finishes
                 pass
+
+            # Prevent warning about non-awaited coroutines
+            sleep_coroutine.close()
+            wait_coroutine.close()
 
         server.session.handler = handler
         await server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
@@ -202,16 +207,33 @@ async def test_server_request(server):
     def handler(server, data):
         response = json.loads(data)
         assert response["result"] == 1
+
     server.session.handler = handler
 
     server.session.receive('{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
+    server.session.test_server.test_close()
+    await server.session.run_loop_future
+
+async def test_server_async_request(server):
+    async def test_method_async():
+        return 2
+    server.test_method_async = test_method_async
+
+    def handler(server, data):
+        response = json.loads(data)
+        assert response["result"] == 2
+    server.session.handler = handler
+
+    server.session.receive('{"jsonrpc": "2.0", "method": "test_method_async", "id": 1}')
+    server.session.test_server.test_close()
+    await server.session.run_loop_future
 
 async def test_server_request_binary(server):
     # Test that if the server sends a binary websocket message, that's a
     # UTF-8 encoded JSON request we process it
-    def test_method():
+    def test_method_binary():
         return 1
-    server.test_method = test_method
+    server.test_method_binary = test_method_binary
 
     def handler(server, data):
         response = json.loads(data)
@@ -219,23 +241,28 @@ async def test_server_request_binary(server):
 
     server.session.handler = handler
 
-    server.session.receive_binary('{"jsonrpc": "2.0", "method": "test_method", "id": 1}'.encode())
+    server.session.receive_binary('{"jsonrpc": "2.0", "method": "test_method_binary", "id": 1}'.encode())
+    server.session.test_server.test_close()
+    await server.session.run_loop_future
 
 async def test_server_notification(server):
-    def test_method():
+    def test_notification():
         pass
-    server.test_method = test_method
-    server.session.receive('{"jsonrpc": "2.0", "method": "test_method"}')
+    server.test_notification = test_notification
+    server.session.receive('{"jsonrpc": "2.0", "method": "test_notification"}')
+    server.session.test_server.test_close()
+    await server.session.run_loop_future
 
 async def test_server_response_error(server):
-    def test_method():
+    def test_error():
         return 1
-    server.test_method = test_method
+    server.test_error = test_error
 
     def receive_side_effect():
         raise aiohttp.ClientError("Test Error")
     server.session.test_server.receive_side_effect = receive_side_effect
-    server.session.receive('{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
+    server.session.receive('{"jsonrpc": "2.0", "method": "test_error", "id": 1}')
+    server.session.test_server.test_close()
 
     with pytest.raises(TransportError) as transport_error:
         await server.session.run_loop_future
@@ -266,7 +293,7 @@ async def test_calls(server):
     server.session.handler = handler3
     await server.foobar({'foo': 'bar'}, _notification=True)
 
-async def test_simultaneous_calls(event_loop, server):
+async def test_simultaneous_calls(server):
     # Test that calls can be delivered simultaneously, and can return out
     # of order
     def handler(server, data):
@@ -275,9 +302,9 @@ async def test_simultaneous_calls(event_loop, server):
     server.session.handler = handler
 
     random.randint = Mock(return_value=1)
-    task1 = event_loop.create_task(server.call1())
+    task1 = asyncio.create_task(server.call1())
     random.randint = Mock(return_value=2)
-    task2 = event_loop.create_task(server.call2())
+    task2 = asyncio.create_task(server.call2())
 
     assert task1.done() is False
     assert task2.done() is False

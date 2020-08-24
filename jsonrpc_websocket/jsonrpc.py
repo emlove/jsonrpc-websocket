@@ -37,7 +37,7 @@ class Server(jsonrpc_base.Server):
         try:
             await self._client.send_str(message.serialize())
             if message.response_id:
-                pending_message = PendingMessage(loop=self.session.loop)
+                pending_message = PendingMessage()
                 self._pending_messages[message.response_id] = pending_message
                 response = await pending_message.wait(self._timeout)
                 del self._pending_messages[message.response_id]
@@ -96,7 +96,7 @@ class Server(jsonrpc_base.Server):
 
                 if 'method' in data:
                     request = jsonrpc_base.Request.parse(data)
-                    response = self.receive_request(request)
+                    response = await self.async_receive_request(request)
                     if response:
                         await self.send_message(response)
                 else:
@@ -124,13 +124,12 @@ class Server(jsonrpc_base.Server):
 class PendingMessage(object):
     """Wait for response of pending message."""
 
-    def __init__(self, loop=None):
-        self._loop = loop
-        self._event = asyncio.Event(loop=loop)
+    def __init__(self):
+        self._event = asyncio.Event()
         self._response = None
 
     async def wait(self, timeout=None):
-        with async_timeout.timeout(timeout=timeout, loop=self._loop):
+        with async_timeout.timeout(timeout=timeout):
             await self._event.wait()
             return self._response
 
