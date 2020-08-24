@@ -293,7 +293,7 @@ async def test_calls(server):
     server.session.handler = handler3
     await server.foobar({'foo': 'bar'}, _notification=True)
 
-async def test_simultaneous_calls(server):
+async def test_simultaneous_calls(event_loop, server):
     # Test that calls can be delivered simultaneously, and can return out
     # of order
     def handler(server, data):
@@ -302,9 +302,9 @@ async def test_simultaneous_calls(server):
     server.session.handler = handler
 
     random.randint = Mock(return_value=1)
-    task1 = asyncio.create_task(server.call1())
+    task1 = event_loop.create_task(server.call1())
     random.randint = Mock(return_value=2)
-    task2 = asyncio.create_task(server.call2())
+    task2 = event_loop.create_task(server.call2())
 
     assert task1.done() is False
     assert task2.done() is False
