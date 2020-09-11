@@ -7,6 +7,7 @@ import unittest
 from unittest.mock import Mock
 
 import aiohttp
+from aiohttp import ClientWebSocketResponse
 import aiohttp.web
 import pep8
 import pytest
@@ -44,7 +45,7 @@ class JsonTestClient():
     def receive_binary(self, data):
         self.test_server.test_binary(data)
 
-class JsonTestServer():
+class JsonTestServer(ClientWebSocketResponse):
     def __init__(self, loop=None):
         self.loop = loop
         self.send_handler = None
@@ -65,7 +66,7 @@ class JsonTestServer():
         self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.ERROR, 0, ''))
 
     def test_close(self):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, 0, ''))
+        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, None, None))
 
     def test_ping(self):
         self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.PING, 0, ''))
@@ -79,7 +80,7 @@ class JsonTestServer():
     async def close(self):
         if not self._closed:
             self._closed = True
-            self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, 0, ''))
+            self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSING, None, None))
 
 
 def assertSameJSON(json1, json2):
@@ -144,7 +145,11 @@ async def test_send_message(server):
     assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
 
 async def test_client_closed(server):
+    assert server.session.run_loop_future.done() is False
     await server.close()
+    assert server.session.run_loop_future.done() is False
+    await server.session.run_loop_future
+    assert server.session.run_loop_future.done() is True
     with pytest.raises(TransportError, match='Client is not connected.'):
         def handler(server, data):
             pass

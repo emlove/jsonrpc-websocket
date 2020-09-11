@@ -63,15 +63,10 @@ class Server(jsonrpc_base.Server):
         """Listen for messages from the websocket server."""
         msg = None
         try:
-            while True:
-                msg = await self._client.receive()
-
-                if msg.type == aiohttp.WSMsgType.CLOSED:
-                    break
+            async for msg in self._client:
                 if msg.type == aiohttp.WSMsgType.ERROR:
                     break
-
-                if msg.type == aiohttp.WSMsgType.BINARY:
+                elif msg.type == aiohttp.WSMsgType.BINARY:
                     try:
                         # If we get a binary message, try and decode it as a
                         # UTF-8 JSON string, in case the server is sending
