@@ -133,6 +133,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+1.2.1 (September 11, 2020)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Fix loop not closing after client closes
+
 1.2.0 (August 24, 2020)
 ~~~~~~~~~~~~~~~~~~~~~~~
 - Support for async server request handlers
