@@ -20,6 +20,7 @@ Usage
 It is recommended to manage the aiohttp ClientSession object externally and pass it to the Server constructor. `(See the aiohttp documentation.) <https://aiohttp.readthedocs.io/en/stable/client_reference.html#aiohttp.ClientSession>`_ If not passed to Server, a ClientSession object will be created automatically.
 
 Execute remote JSON-RPC functions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -42,6 +43,7 @@ Execute remote JSON-RPC functions
     asyncio.get_event_loop().run_until_complete(routine())
 
 A notification
+~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -61,6 +63,7 @@ A notification
     asyncio.get_event_loop().run_until_complete(routine())
 
 Handle requests from server to client
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -83,6 +86,7 @@ Handle requests from server to client
     asyncio.get_event_loop().run_until_complete(routine())
 
 Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aiohttp.readthedocs.io/en/stable/client_reference.html#aiohttp.ClientSession.request>`_)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
@@ -106,6 +110,7 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
     asyncio.get_event_loop().run_until_complete(routine())
 
 Pass through aiohttp exceptions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
