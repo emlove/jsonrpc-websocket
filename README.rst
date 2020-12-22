@@ -17,7 +17,7 @@ Main Features
 
 Usage
 -----
-It is recommended to manage the aiohttp ClientSession object externally and pass it to the Server constructor. `(See the aiohttp documentation.) <https://aiohttp.readthedocs.io/en/stable/client_reference.html#aiohttp.ClientSession>`_ If not passed to Server, a ClientSession object will be created automatically.
+It is recommended to manage the aiohttp ClientSession object externally and pass it to the Server constructor. `(See the aiohttp documentation.) <https://aiohttp.readthedocs.io/en/stable/client_reference.html#aiohttp.ClientSession>`_ If not passed to Server, a ClientSession object will be created automatically, and will be closed when the websocket connection is closed. If you pass in an external ClientSession, it is your responsibility to close it when you are finished.
 
 Execute remote JSON-RPC functions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,7 +38,6 @@ Execute remote JSON-RPC functions
             await server.foo.bar(baz=1, qux=2)
         finally:
             await server.close()
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -58,7 +57,6 @@ A notification
             await server.foo(bar=1, _notification=True)
         finally:
             await server.close()
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -81,7 +79,6 @@ Handle requests from server to client
             await server.ws_connect()
         finally:
             await server.close()
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -105,7 +102,6 @@ Pass through arguments to aiohttp (see also `aiohttp  documentation <http://aioh
             await server.foo()
         finally:
             await server.close()
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 
@@ -128,7 +124,6 @@ Pass through aiohttp exceptions
             print(transport_error.args[1]) # this will hold a aiohttp exception instance
         finally:
             await server.close()
-            await server.session.close()
 
     asyncio.get_event_loop().run_until_complete(routine())
 

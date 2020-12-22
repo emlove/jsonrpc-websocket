@@ -14,7 +14,8 @@ class Server(jsonrpc_base.Server):
 
     def __init__(self, url, session=None, **connect_kwargs):
         super().__init__()
-        object.__setattr__(self, 'session', session or aiohttp.ClientSession())
+        self._session = session or aiohttp.ClientSession()
+        self._internal_session = session is None # True if we made our own session
         self._client = None
         self._connect_kwargs = connect_kwargs
         self._url = url
@@ -53,11 +54,11 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Connection already open.')
 
         try:
-            self._client = await self.session.ws_connect(
+            self._client = await self._session.ws_connect(
                 self._url, **self._connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
-        return self.session.loop.create_task(self._ws_loop())
+        return self._session.loop.create_task(self._ws_loop())
 
     async def _ws_loop(self):
         """Listen for messages from the websocket server."""
@@ -109,6 +110,12 @@ class Server(jsonrpc_base.Server):
         if self.connected:
             await self._client.close()
             self._client = None
+        if self._internal_session:
+            # If we created a clientsession for this Server, close it here.
+            # And then instantiate a new clientsession in case the
+            # connection should be reopened
+            await self._session.close()
+            self._session = aiohttp.ClientSession()
 
     @property
     def connected(self):
