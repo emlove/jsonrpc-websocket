@@ -2,6 +2,7 @@
 branch = True
 source =
 	jsonrpc_websocket
+relative_files = True
 
 [report]
 show_missing = True
