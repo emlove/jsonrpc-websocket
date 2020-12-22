@@ -135,32 +135,36 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
-1.2.1 (September 11, 2020)
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.0.0 (2020-12-22)
+~~~~~~~~~~~~~~~~~~
+- Remove session as a reserved attribute on Server
+
+1.2.1 (2020-09-11)
+~~~~~~~~~~~~~~~~~~
 - Fix loop not closing after client closes
 
-1.2.0 (August 24, 2020)
-~~~~~~~~~~~~~~~~~~~~~~~
+1.2.0 (2020-08-24)
+~~~~~~~~~~~~~~~~~~
 - Support for async server request handlers
 
-1.1.0 (February 17, 2020)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1.1.0 (2020-02-17)
+~~~~~~~~~~~~~~~~~~
 - Support servers that send JSON-RPC requests as binary messages encoded with UTF-8 `(#5) <https://github.com/emlove/jsonrpc-websocket/pull/5>`_ `@shiaky <https://github.com/shiaky>`_
 
-1.0.2 (November 12, 2019)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+1.0.2 (2019-11-12)
+~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.3
 
-1.0.1 (August 23, 2018)
-~~~~~~~~~~~~~~~~~~~~~~~
+1.0.1 (2018-08-23)
+~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.2
 
-1.0.0 (July 6, 2018)
-~~~~~~~~~~~~~~~~~~~~
+1.0.0 (2018-07-06)
+~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 1.0.1
 
-0.6 (March 11, 2018)
-~~~~~~~~~~~~~~~~~~~~
+0.6 (2018-03-11)
+~~~~~~~~~~~~~~~~
 - Minimum required version of aiohttp is now 3.0.
 - Support for Python 3.4 is now dropped.
 
