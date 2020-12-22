@@ -1,21 +1,17 @@
 import asyncio
-import inspect
 import json
-import os
 import random
-import unittest
 from unittest.mock import Mock
 from asynctest import MagicMock, patch
 
 import aiohttp
 from aiohttp import ClientWebSocketResponse
 import aiohttp.web
-import pep8
 import pytest
 
 import jsonrpc_base
 import jsonrpc_websocket.jsonrpc
-from jsonrpc_websocket import Server, ProtocolError, TransportError
+from jsonrpc_websocket import Server, TransportError
 
 pytestmark = pytest.mark.asyncio
 
@@ -46,6 +42,7 @@ class JsonTestClient():
     def receive_binary(self, data):
         self.test_server.test_binary(data)
 
+
 class JsonTestServer(ClientWebSocketResponse):
     def __init__(self, loop=None):
         self.loop = loop
@@ -58,19 +55,24 @@ class JsonTestServer(ClientWebSocketResponse):
         self.send_handler(self, data)
 
     def test_receive(self, data):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.TEXT, data, ''))
+        self.receive_queue.put_nowait(
+            aiohttp.WSMessage(aiohttp.WSMsgType.TEXT, data, ''))
 
     def test_binary(self, data=bytes()):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.BINARY, data, ''))
+        self.receive_queue.put_nowait(
+            aiohttp.WSMessage(aiohttp.WSMsgType.BINARY, data, ''))
 
     def test_error(self):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.ERROR, 0, ''))
+        self.receive_queue.put_nowait(
+            aiohttp.WSMessage(aiohttp.WSMsgType.ERROR, 0, ''))
 
     def test_close(self):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, None, None))
+        self.receive_queue.put_nowait(
+            aiohttp.WSMessage(aiohttp.WSMsgType.CLOSED, None, None))
 
     def test_ping(self):
-        self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.PING, 0, ''))
+        self.receive_queue.put_nowait(
+            aiohttp.WSMessage(aiohttp.WSMsgType.PING, 0, ''))
 
     async def receive(self):
         value = await self.receive_queue.get()
@@ -81,7 +83,8 @@ class JsonTestServer(ClientWebSocketResponse):
     async def close(self):
         if not self._closed:
             self._closed = True
-            self.receive_queue.put_nowait(aiohttp.WSMessage(aiohttp.WSMsgType.CLOSING, None, None))
+            self.receive_queue.put_nowait(
+                aiohttp.WSMessage(aiohttp.WSMsgType.CLOSING, None, None))
 
 
 def assertSameJSON(json1, json2):
@@ -107,33 +110,23 @@ async def server(event_loop):
         await client.run_loop_future
 
 
-def test_pep8_conformance():
-    """Test that we conform to PEP8."""
-
-    source_files = []
-    project_dir = os.path.dirname(os.path.abspath(__file__))
-    package_dir = os.path.join(project_dir, 'jsonrpc_async')
-    for root, directories, filenames in os.walk(package_dir):
-        source_files.extend([os.path.join(root, f) for f in filenames if f.endswith('.py')])
-
-    pep8style = pep8.StyleGuide(quiet=False, max_line_length=120)
-    result = pep8style.check_files(source_files)
-    assert result.total_errors == 0
-
 def test_pending_message_response():
     pending_message = jsonrpc_websocket.jsonrpc.PendingMessage()
     pending_message.response = 10
     assert pending_message.response == 10
 
+
 async def test_internal_session():
     client = MagicMock(spec=aiohttp.ClientSession)
-    with patch('jsonrpc_websocket.jsonrpc.aiohttp.ClientSession', return_value=client) as client_class:
+    with patch('jsonrpc_websocket.jsonrpc.aiohttp.ClientSession',
+               return_value=client) as client_class:
         server = Server('/xmlrpc', timeout=0.2)
         client_class.assert_called_once()
 
         await server.close()
 
         client.close.assert_called_once()
+
 
 async def test_send_message(server):
     # catch timeout responses
@@ -151,9 +144,11 @@ async def test_send_message(server):
             wait_coroutine.close()
 
         server._session.handler = handler
-        await server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
+        await server.send_message(
+            jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
     assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
+
 
 async def test_client_closed(server):
     assert server._session.run_loop_future.done() is False
@@ -165,25 +160,33 @@ async def test_client_closed(server):
         def handler(server, data):
             pass
         server._session.handler = handler
-        await server.send_message(jsonrpc_base.Request('my_method', params=None, msg_id=1))
+        await server.send_message(
+            jsonrpc_base.Request('my_method', params=None, msg_id=1))
+
 
 async def test_double_connect(server):
     with pytest.raises(TransportError, match='Connection already open.'):
         await server.ws_connect()
 
+
 async def test_ws_error(server):
     server._session.test_server.test_error()
-    with pytest.raises(TransportError, match='Websocket error detected. Connection closed.'):
+    with pytest.raises(
+            TransportError,
+            match='Websocket error detected. Connection closed.'):
         await server._session.run_loop_future
+
 
 async def test_binary(server):
     server._session.test_server.test_binary()
+
 
 async def test_message_not_json(server):
     with pytest.raises(TransportError) as transport_error:
         server._session.receive('not json')
         await server._session.run_loop_future
     assert isinstance(transport_error.value.args[1], ValueError)
+
 
 async def test_message_binary_not_utf8(server):
     # If we get a binary message, we should try to decode it as JSON, but
@@ -193,6 +196,7 @@ async def test_message_binary_not_utf8(server):
     server._session.test_server.test_close()
     await server._session.run_loop_future
 
+
 async def test_message_binary_not_json(server):
     # If we get a binary message, we should try to decode it as JSON, but
     # if it's not valid we should just ignore it, and an exception should
@@ -201,10 +205,12 @@ async def test_message_binary_not_json(server):
     server._session.test_server.test_close()
     await server._session.run_loop_future
 
+
 async def test_message_ping_ignored(server):
     server._session.test_server.test_ping()
     server._session.test_server.test_close()
     await server._session.run_loop_future
+
 
 async def test_connection_timeout(server):
     def bad_connect():
@@ -214,6 +220,7 @@ async def test_connection_timeout(server):
     with pytest.raises(TransportError) as transport_error:
         await server.ws_connect()
     assert isinstance(transport_error.value.args[1], aiohttp.ClientError)
+
 
 async def test_server_request(server):
     def test_method():
@@ -226,9 +233,11 @@ async def test_server_request(server):
 
     server._session.handler = handler
 
-    server._session.receive('{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "method": "test_method", "id": 1}')
     server._session.test_server.test_close()
     await server._session.run_loop_future
+
 
 async def test_server_async_request(server):
     async def test_method_async():
@@ -240,9 +249,11 @@ async def test_server_async_request(server):
         assert response["result"] == 2
     server._session.handler = handler
 
-    server._session.receive('{"jsonrpc": "2.0", "method": "test_method_async", "id": 1}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "method": "test_method_async", "id": 1}')
     server._session.test_server.test_close()
     await server._session.run_loop_future
+
 
 async def test_server_request_binary(server):
     # Test that if the server sends a binary websocket message, that's a
@@ -257,17 +268,21 @@ async def test_server_request_binary(server):
 
     server._session.handler = handler
 
-    server._session.receive_binary('{"jsonrpc": "2.0", "method": "test_method_binary", "id": 1}'.encode())
+    server._session.receive_binary(
+        '{"jsonrpc": "2.0", "method": "test_method_binary", "id": 1}'.encode())
     server._session.test_server.test_close()
     await server._session.run_loop_future
+
 
 async def test_server_notification(server):
     def test_notification():
         pass
     server.test_notification = test_notification
-    server._session.receive('{"jsonrpc": "2.0", "method": "test_notification"}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "method": "test_notification"}')
     server._session.test_server.test_close()
     await server._session.run_loop_future
+
 
 async def test_server_response_error(server):
     def test_error():
@@ -277,12 +292,14 @@ async def test_server_response_error(server):
     def receive_side_effect():
         raise aiohttp.ClientError("Test Error")
     server._session.test_server.receive_side_effect = receive_side_effect
-    server._session.receive('{"jsonrpc": "2.0", "method": "test_error", "id": 1}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "method": "test_error", "id": 1}')
     server._session.test_server.test_close()
 
     with pytest.raises(TransportError) as transport_error:
         await server._session.run_loop_future
     assert isinstance(transport_error.value.args[1], aiohttp.ClientError)
+
 
 async def test_calls(server):
     # rpc call with positional parameters:
@@ -308,6 +325,7 @@ async def test_calls(server):
 
     server._session.handler = handler3
     await server.foobar({'foo': 'bar'}, _notification=True)
+
 
 async def test_simultaneous_calls(event_loop, server):
     # Test that calls can be delivered simultaneously, and can return out
@@ -339,6 +357,7 @@ async def test_simultaneous_calls(event_loop, server):
 
     assert 1 == task1.result()
     assert 2 == task2.result()
+
 
 async def test_notification(server):
     # Verify that we ignore the server response

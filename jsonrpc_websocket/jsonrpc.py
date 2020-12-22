@@ -6,7 +6,7 @@ from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
 import async_timeout
 import jsonrpc_base
-from jsonrpc_base import JSONRPCError, TransportError, ProtocolError
+from jsonrpc_base import TransportError
 
 
 class Server(jsonrpc_base.Server):
@@ -15,15 +15,21 @@ class Server(jsonrpc_base.Server):
     def __init__(self, url, session=None, **connect_kwargs):
         super().__init__()
         self._session = session or aiohttp.ClientSession()
-        self._internal_session = session is None # True if we made our own session
+
+        # True if we made our own session
+        self._internal_session = session is None
+
         self._client = None
         self._connect_kwargs = connect_kwargs
         self._url = url
-        self._connect_kwargs['headers'] = self._connect_kwargs.get('headers', {})
-        self._connect_kwargs['headers']['Content-Type'] = self._connect_kwargs['headers'].get(
-            'Content-Type', 'application/json')
-        self._connect_kwargs['headers']['Accept'] = self._connect_kwargs['headers'].get(
-            'Accept', 'application/json-rpc')
+        self._connect_kwargs['headers'] = self._connect_kwargs.get(
+            'headers', {})
+        self._connect_kwargs['headers']['Content-Type'] = (
+            self._connect_kwargs['headers'].get(
+                'Content-Type', 'application/json'))
+        self._connect_kwargs['headers']['Accept'] = (
+            self._connect_kwargs['headers'].get(
+                'Accept', 'application/json-rpc'))
         self._timeout = self._connect_kwargs.get('timeout')
         self._pending_messages = {}
 
@@ -87,8 +93,7 @@ class Server(jsonrpc_base.Server):
                     # cpython's optimizations prevent coveragepy from detecting
                     # that it's run
                     # https://bitbucket.org/ned/coveragepy/issues/198/continue-marked-as-not-covered
-                    continue # pragma: no cover
-
+                    continue  # pragma: no cover
 
                 if 'method' in data:
                     request = jsonrpc_base.Request.parse(data)
@@ -103,7 +108,8 @@ class Server(jsonrpc_base.Server):
         finally:
             await self.close()
             if msg and msg.type == aiohttp.WSMsgType.ERROR:
-                raise TransportError('Websocket error detected. Connection closed.')
+                raise TransportError(
+                    'Websocket error detected. Connection closed.')
 
     async def close(self):
         """Close the connection to the websocket server."""
