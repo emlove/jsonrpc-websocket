@@ -1,0 +1,7 @@
+# Git .mailmap file. This file changes the display of names in git log, and
+# other locations. This lets us change how old names and emails are displayed
+# without rewriting git history.
+#
+# See https://blog.developer.atlassian.com/aliasing-authors-in-git/
+
+Emily Mills <emily@emlove.me> <adam@armills.info>
