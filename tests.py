@@ -2,7 +2,7 @@ import asyncio
 import json
 import random
 from unittest.mock import Mock
-from asynctest import MagicMock, patch
+import sys
 
 import aiohttp
 from aiohttp import ClientWebSocketResponse
@@ -12,6 +12,11 @@ import pytest
 import jsonrpc_base
 import jsonrpc_websocket.jsonrpc
 from jsonrpc_websocket import Server, TransportError
+
+if sys.version_info[:2] < (3, 8):
+    from asynctest import patch, MagicMock as AsyncMock
+else:
+    from unittest.mock import patch, AsyncMock
 
 pytestmark = pytest.mark.asyncio
 
@@ -117,7 +122,7 @@ def test_pending_message_response():
 
 
 async def test_internal_session():
-    client = MagicMock(spec=aiohttp.ClientSession)
+    client = AsyncMock(spec=aiohttp.ClientSession)
     with patch('jsonrpc_websocket.jsonrpc.aiohttp.ClientSession',
                return_value=client) as client_class:
         server = Server('/xmlrpc', timeout=0.2)
