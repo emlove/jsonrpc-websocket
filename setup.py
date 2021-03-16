@@ -20,7 +20,7 @@ setup(
     long_description_content_type='text/x-rst',
     long_description=open('README.rst').read(),
     install_requires=[
-        'jsonrpc-base>=1.1.0',
+        'jsonrpc-base==1.1.0',
         'aiohttp>=3.0.0',
     ],
     classifiers=[
@@ -32,6 +32,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 
 )
