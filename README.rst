@@ -135,6 +135,12 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.0.0 (2021-03-17)
+~~~~~~~~~~~~~~~~~~
+- Bumped jsonrpc-base to version 2.0.0
+- BREAKING CHANGE: `Allow single mapping as a positional parameter. <https://github.com/emlove/jsonrpc-base/pull/6>`_
+  Previously, when calling with a single dict as a parameter (example: ``server.foo({'bar': 0})``), the mapping was used as the JSON-RPC keyword parameters. This made it impossible to send a mapping as the first and only positional parameter. If you depended on the old behavior, you can recreate it by spreading the mapping as your method's kwargs. (example: ``server.foo(**{'bar': 0})``)
+
 2.0.0 (2020-12-22)
 ~~~~~~~~~~~~~~~~~~
 - Remove session as a reserved attribute on Server
