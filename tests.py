@@ -326,10 +326,17 @@ async def test_calls(server):
 
     def handler3(server, data):
         request = json.loads(data)
-        assert request["params"] == {'foo': 'bar'}
+        assert request["params"] == [{'foo': 'bar'}]
 
     server._session.handler = handler3
     await server.foobar({'foo': 'bar'}, _notification=True)
+
+    def handler3(server, data):
+        request = json.loads(data)
+        assert request["params"] == {'foo': 'bar'}
+
+    server._session.handler = handler3
+    await server.foobar(**{'foo': 'bar'}, _notification=True)
 
 
 async def test_simultaneous_calls(event_loop, server):
