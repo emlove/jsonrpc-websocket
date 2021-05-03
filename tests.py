@@ -1,7 +1,6 @@
 import asyncio
 import json
-import random
-from unittest.mock import Mock
+from unittest import mock
 import sys
 
 import aiohttp
@@ -95,12 +94,6 @@ class JsonTestServer(ClientWebSocketResponse):
 def assertSameJSON(json1, json2):
     """Tells whether two json strings, once decoded, are the same dictionary"""
     assert json.loads(json1) == json.loads(json2)
-
-
-@pytest.fixture(autouse=True)
-def mock_rand():
-    """Mock the build in rand method for determinism in tests."""
-    random.randint = Mock(return_value=1)
 
 
 @pytest.fixture()
@@ -311,18 +304,22 @@ async def test_calls(server):
     def handler1(server, data):
         request = json.loads(data)
         assert request["params"] == [42, 23]
-        server.test_receive('{"jsonrpc": "2.0", "result": 19, "id": 1}')
+        server.test_receive(
+            '{"jsonrpc": "2.0", "result": 19, "id": "abcd-1234"}')
 
     server._session.handler = handler1
-    assert (await server.subtract(42, 23)) == 19
+    with mock.patch("uuid.uuid4", return_value="abcd-1234"):
+        assert (await server.subtract(42, 23)) == 19
 
     def handler2(server, data):
         request = json.loads(data)
         assert request["params"] == {'y': 23, 'x': 42}
-        server.test_receive('{"jsonrpc": "2.0", "result": 19, "id": 1}')
+        server.test_receive(
+            '{"jsonrpc": "2.0", "result": 19, "id": "abcd-1234"}')
 
     server._session.handler = handler2
-    assert (await server.subtract(x=42, y=23)) == 19
+    with mock.patch("uuid.uuid4", return_value="abcd-1234"):
+        assert (await server.subtract(x=42, y=23)) == 19
 
     def handler3(server, data):
         request = json.loads(data)
@@ -347,21 +344,23 @@ async def test_simultaneous_calls(event_loop, server):
 
     server._session.handler = handler
 
-    random.randint = Mock(return_value=1)
-    task1 = event_loop.create_task(server.call1())
-    random.randint = Mock(return_value=2)
-    task2 = event_loop.create_task(server.call2())
+    with mock.patch("uuid.uuid4", return_value="abcd-1234"):
+        task1 = event_loop.create_task(server.call1())
+    with mock.patch("uuid.uuid4", return_value="efgh-5678"):
+        task2 = event_loop.create_task(server.call2())
 
     assert task1.done() is False
     assert task2.done() is False
 
-    server._session.receive('{"jsonrpc": "2.0", "result": 2, "id": 2}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "result": 2, "id": "efgh-5678"}')
     await task2
 
     assert task1.done() is False
     assert task2.done()
 
-    server._session.receive('{"jsonrpc": "2.0", "result": 1, "id": 1}')
+    server._session.receive(
+        '{"jsonrpc": "2.0", "result": 1, "id": "abcd-1234"}')
     await task1
 
     assert task1.done()

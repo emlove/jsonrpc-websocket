@@ -1,7 +1,7 @@
 flake8==3.7.8
 coverage==5.5
 coveralls==3.0.1
-jsonrpc-base>=2.0.0
+jsonrpc-base>=2.1.0
 aiohttp>=3.0.0
 pytest-aiohttp==0.3.0
 pytest==6.2.2

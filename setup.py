@@ -20,7 +20,7 @@ setup(
     long_description_content_type='text/x-rst',
     long_description=open('README.rst').read(),
     install_requires=[
-        'jsonrpc-base>=2.0.0',
+        'jsonrpc-base>=2.1.0',
         'aiohttp>=3.0.0',
     ],
     classifiers=[
