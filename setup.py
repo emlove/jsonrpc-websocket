@@ -9,8 +9,8 @@ except ImportError:
 
 setup(
     name='jsonrpc-websocket',
-    version='3.1.0',
-    author='Emily Mills',
+    version='3.1.1',
+    author='Emily Love Mills',
     author_email='emily@emlove.me',
     packages=('jsonrpc_websocket',),
     license='BSD',

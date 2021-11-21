@@ -135,6 +135,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.1.1 (2021-11-21)
+~~~~~~~~~~~~~~~~~~
+- Fixed compatibility with async_timeout 4.0
+
 3.1.0 (2021-05-03)
 ~~~~~~~~~~~~~~~~~~
 - Bumped jsonrpc-base to version 2.1.0
