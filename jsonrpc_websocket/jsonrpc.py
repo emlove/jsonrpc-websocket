@@ -137,7 +137,7 @@ class PendingMessage(object):
         self._response = None
 
     async def wait(self, timeout=None):
-        with async_timeout.timeout(timeout=timeout):
+        with async_timeout.timeout(timeout):
             await self._event.wait()
             return self._response
 
