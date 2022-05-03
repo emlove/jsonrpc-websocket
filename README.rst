@@ -13,7 +13,6 @@ This is a compact and simple JSON-RPC websocket client implementation for asynci
 Main Features
 -------------
 
-* Python 3.6, 3.7, 3.8 & 3.9 compatible
 * Supports nested namespaces (eg. `app.users.getUsers()`)
 * 100% test coverage
 
