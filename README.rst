@@ -134,6 +134,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.1.2 (2022-05-03)
+~~~~~~~~~~~~~~~~~~
+- Unpin test dependencies
+
 3.1.1 (2021-11-21)
 ~~~~~~~~~~~~~~~~~~
 - Fixed compatibility with async_timeout 4.0
