@@ -134,6 +134,11 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.1.4 (2022-05-23)
+~~~~~~~~~~~~~~~~~~
+- Only reconnect session when the session is managed internally
+- Remove deprecated with timeout syntax
+
 3.1.3 (2022-05-23)
 ~~~~~~~~~~~~~~~~~~
 - Fix unclosed client session bug `(#12) <https://github.com/emlove/jsonrpc-websocket/pull/12>`_ `@Arjentix <https://github.com/Arjentix>`_
