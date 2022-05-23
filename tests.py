@@ -46,6 +46,10 @@ class JsonTestClient():
     def receive_binary(self, data):
         self.test_server.test_binary(data)
 
+    @property
+    def closed(self):
+        self.test_server is None
+
 
 class JsonTestServer(ClientWebSocketResponse):
     def __init__(self, loop=None):

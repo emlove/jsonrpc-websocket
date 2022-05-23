@@ -60,6 +60,8 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Connection already open.')
 
         try:
+            if self._session.closed:
+                self._session = aiohttp.ClientSession()
             self._client = await self._session.ws_connect(
                 self._url, **self._connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
@@ -117,11 +119,7 @@ class Server(jsonrpc_base.Server):
             await self._client.close()
             self._client = None
         if self._internal_session:
-            # If we created a clientsession for this Server, close it here.
-            # And then instantiate a new clientsession in case the
-            # connection should be reopened
             await self._session.close()
-            self._session = aiohttp.ClientSession()
 
     @property
     def connected(self):
