@@ -13,9 +13,9 @@ import jsonrpc_websocket.jsonrpc
 from jsonrpc_websocket import Server, TransportError
 
 if sys.version_info[:2] < (3, 8):
-    from asynctest import patch, MagicMock as AsyncMock
+    from asynctest import patch
 else:
-    from unittest.mock import patch, AsyncMock
+    from unittest.mock import patch
 
 pytestmark = pytest.mark.asyncio
 
@@ -31,6 +31,9 @@ class JsonTestClient():
             self.connect_side_effect()
         self.test_server = JsonTestServer(self.loop)
         return self.test_server
+
+    async def close(self):
+        self._test_server = None
 
     @property
     def handler(self):
@@ -48,7 +51,7 @@ class JsonTestClient():
 
     @property
     def closed(self):
-        self.test_server is None
+        return self.test_server is None
 
 
 class JsonTestServer(ClientWebSocketResponse):
@@ -101,9 +104,14 @@ def assertSameJSON(json1, json2):
 
 
 @pytest.fixture()
-async def server(event_loop):
+async def client(event_loop):
     """Generate a mock json server."""
-    client = JsonTestClient(event_loop)
+    return JsonTestClient(event_loop)
+
+
+@pytest.fixture()
+async def server(client):
+    """Generate a mock json server."""
     server = Server('/xmlrpc', session=client, timeout=0.2)
     client.run_loop_future = await server.ws_connect()
     yield server
@@ -118,8 +126,7 @@ def test_pending_message_response():
     assert pending_message.response == 10
 
 
-async def test_internal_session():
-    client = AsyncMock(spec=aiohttp.ClientSession)
+async def test_internal_session(client):
     with patch('jsonrpc_websocket.jsonrpc.aiohttp.ClientSession',
                return_value=client) as client_class:
         server = Server('/xmlrpc', timeout=0.2)
@@ -127,7 +134,9 @@ async def test_internal_session():
 
         await server.close()
 
-        client.close.assert_called_once()
+        await server.ws_connect()
+
+        assert client_class.call_count == 2
 
 
 async def test_send_message(server):
