@@ -7,6 +7,7 @@ import aiohttp
 from aiohttp import ClientWebSocketResponse
 import aiohttp.web
 import pytest
+import pytest_asyncio
 
 import jsonrpc_base
 import jsonrpc_websocket.jsonrpc
@@ -103,13 +104,13 @@ def assertSameJSON(json1, json2):
     assert json.loads(json1) == json.loads(json2)
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture
 async def client(event_loop):
     """Generate a mock json server."""
     return JsonTestClient(event_loop)
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture
 async def server(client):
     """Generate a mock json server."""
     server = Server('/xmlrpc', session=client, timeout=0.2)
