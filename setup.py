@@ -22,6 +22,7 @@ setup(
     install_requires=[
         'jsonrpc-base>=2.1.0',
         'aiohttp>=3.0.0',
+        'async-timeout>=4.0.0',
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
