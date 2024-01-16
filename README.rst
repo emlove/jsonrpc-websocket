@@ -134,6 +134,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.1.5 (2024-01-16)
+~~~~~~~~~~~~~~~~~~
+- Add explicit dependency to async-timeout `(#13) <https://github.com/emlove/jsonrpc-websocket/pull/13>`_ `@miettal <https://github.com/miettal>`_
+
 3.1.4 (2022-05-23)
 ~~~~~~~~~~~~~~~~~~
 - Only reconnect session when the session is managed internally
