@@ -105,9 +105,9 @@ def assertSameJSON(json1, json2):
 
 
 @pytest_asyncio.fixture
-async def client(event_loop):
+async def client():
     """Generate a mock json server."""
-    return JsonTestClient(event_loop)
+    return JsonTestClient(asyncio.get_running_loop())
 
 
 @pytest_asyncio.fixture
@@ -350,9 +350,11 @@ async def test_calls(server):
     await server.foobar(**{'foo': 'bar'}, _notification=True)
 
 
-async def test_simultaneous_calls(event_loop, server):
+async def test_simultaneous_calls(server):
     # Test that calls can be delivered simultaneously, and can return out
     # of order
+    event_loop = asyncio.get_running_loop()
+
     def handler(server, data):
         pass
 
