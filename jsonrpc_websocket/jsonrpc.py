@@ -1,12 +1,17 @@
 import asyncio
 import json
+import sys
 
 import aiohttp
 from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
-import async_timeout
 import jsonrpc_base
 from jsonrpc_base import TransportError
+
+if sys.version_info >= (3, 11):
+    from asyncio import timeout as async_timeout
+else:
+    from async_timeout import timeout as async_timeout
 
 
 class Server(jsonrpc_base.Server):
@@ -135,7 +140,7 @@ class PendingMessage(object):
         self._response = None
 
     async def wait(self, timeout=None):
-        async with async_timeout.timeout(timeout):
+        async with async_timeout(timeout):
             await self._event.wait()
             return self._response
 
