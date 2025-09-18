@@ -134,6 +134,11 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.1.6 (2025-09-18)
+~~~~~~~~~~~~~~~~~~
+- Port to pytest-asyncio >= 1.0.0 `(#16) <https://github.com/emlove/jsonrpc-websocket/pull/16>`_ `@cjwatson <https://github.com/cjwatson>`_
+- Use built-in asyncio timeout for python versions 11 and up
+
 3.1.5 (2024-01-16)
 ~~~~~~~~~~~~~~~~~~
 - Add explicit dependency to async-timeout `(#13) <https://github.com/emlove/jsonrpc-websocket/pull/13>`_ `@miettal <https://github.com/miettal>`_
