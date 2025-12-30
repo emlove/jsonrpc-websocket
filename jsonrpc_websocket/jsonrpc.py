@@ -107,8 +107,10 @@ class Server(jsonrpc_base.Server):
 
                 if 'method' in data:
                     request = jsonrpc_base.Request.parse(data)
-                    # Handle method call in a task to prevent blocking the read loop
-                    self._session.loop.create_task(self._receive_request(request))
+                    # Handle method call in a task to prevent blocking the read
+                    # loop
+                    self._session.loop.create_task(
+                        self._receive_request(request))
                 else:
                     self._pending_messages[data['id']].response = data
 
