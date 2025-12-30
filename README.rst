@@ -134,6 +134,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.2.0 (2025-12-30)
+~~~~~~~~~~~~~~~~~~
+- Prevent reverse RPC calls from blocking the main read loop `(#18) <https://github.com/emlove/jsonrpc-websocket/pull/18>`_ `@vegas503 <https://github.com/vegas503>`_
+
 3.1.6 (2025-09-18)
 ~~~~~~~~~~~~~~~~~~
 - Port to pytest-asyncio >= 1.0.0 `(#16) <https://github.com/emlove/jsonrpc-websocket/pull/16>`_ `@cjwatson <https://github.com/cjwatson>`_
