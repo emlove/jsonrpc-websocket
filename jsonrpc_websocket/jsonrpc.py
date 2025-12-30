@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import sys
 
 import aiohttp
@@ -7,6 +8,8 @@ from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
 import jsonrpc_base
 from jsonrpc_base import TransportError
+
+_LOGGER = logging.getLogger(__name__)
 
 if sys.version_info >= (3, 11):
     from asyncio import timeout as async_timeout
@@ -104,9 +107,10 @@ class Server(jsonrpc_base.Server):
 
                 if 'method' in data:
                     request = jsonrpc_base.Request.parse(data)
-                    response = await self.async_receive_request(request)
-                    if response:
-                        await self.send_message(response)
+                    # Handle method call in a task to prevent blocking the read
+                    # loop
+                    self._session.loop.create_task(
+                        self._receive_request(request))
                 else:
                     self._pending_messages[data['id']].response = data
 
@@ -130,6 +134,15 @@ class Server(jsonrpc_base.Server):
     def connected(self):
         """Websocket server is connected."""
         return self._client is not None
+
+    async def _receive_request(self, request: jsonrpc_base.Request):
+        """Handle request and log errors"""
+        try:
+            response = await self.async_receive_request(request)
+            if response:
+                await self.send_message(response)
+        except Exception as exc:
+            _LOGGER.exception('Error while handling request', exc_info=exc)
 
 
 class PendingMessage(object):
