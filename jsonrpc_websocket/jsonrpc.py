@@ -141,8 +141,6 @@ class Server(jsonrpc_base.Server):
             response = await self.async_receive_request(request)
             if response:
                 await self.send_message(response)
-        except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
-            _LOGGER.exception('Transport Error', exc_info=exc)
         except Exception as exc:
             _LOGGER.exception('Error while handling request', exc_info=exc)
 
