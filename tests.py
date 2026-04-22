@@ -22,15 +22,14 @@ pytestmark = pytest.mark.asyncio
 
 
 class JsonTestClient():
-    def __init__(self, loop=None):
+    def __init__(self):
         self.test_server = None
-        self.loop = loop
         self.connect_side_effect = None
 
     async def ws_connect(self, *args, **kwargs):
         if self.connect_side_effect:
             self.connect_side_effect()
-        self.test_server = JsonTestServer(self.loop)
+        self.test_server = JsonTestServer()
         return self.test_server
 
     async def close(self):
@@ -56,8 +55,7 @@ class JsonTestClient():
 
 
 class JsonTestServer(ClientWebSocketResponse):
-    def __init__(self, loop=None):
-        self.loop = loop
+    def __init__(self):
         self.send_handler = None
         self.receive_queue = asyncio.Queue()
         self._closed = False
@@ -107,7 +105,7 @@ def assertSameJSON(json1, json2):
 @pytest_asyncio.fixture
 async def client():
     """Generate a mock json server."""
-    return JsonTestClient(asyncio.get_running_loop())
+    return JsonTestClient()
 
 
 @pytest_asyncio.fixture
@@ -121,7 +119,7 @@ async def server(client):
         await client.run_loop_future
 
 
-def test_pending_message_response():
+async def test_pending_message_response():
     pending_message = jsonrpc_websocket.jsonrpc.PendingMessage()
     pending_message.response = 10
     assert pending_message.response == 10

@@ -74,7 +74,7 @@ class Server(jsonrpc_base.Server):
                 self._url, **self._connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
-        return self._session.loop.create_task(self._ws_loop())
+        return asyncio.get_running_loop().create_task(self._ws_loop())
 
     async def _ws_loop(self):
         """Listen for messages from the websocket server."""
@@ -109,7 +109,7 @@ class Server(jsonrpc_base.Server):
                     request = jsonrpc_base.Request.parse(data)
                     # Handle method call in a task to prevent blocking the read
                     # loop
-                    self._session.loop.create_task(
+                    asyncio.get_running_loop().create_task(
                         self._receive_request(request))
                 else:
                     self._pending_messages[data['id']].response = data
