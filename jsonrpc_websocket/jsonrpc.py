@@ -49,18 +49,21 @@ class Server(jsonrpc_base.Server):
         if self._client is None:
             raise TransportError('Client is not connected.', message)
 
+        pending_message = None
+        if message.response_id:
+            pending_message = PendingMessage()
+            self._pending_messages[message.response_id] = pending_message
+
         try:
             await self._client.send_str(message.serialize())
-            if message.response_id:
-                pending_message = PendingMessage()
-                self._pending_messages[message.response_id] = pending_message
-                response = await pending_message.wait(self._timeout)
-                del self._pending_messages[message.response_id]
-            else:
-                response = None
+            response = (await pending_message.wait(self._timeout)
+                        if pending_message is not None else None)
             return message.parse_response(response)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
+        finally:
+            if pending_message is not None:
+                del self._pending_messages[message.response_id]
 
     async def ws_connect(self):
         """Connect to the websocket server."""
@@ -112,7 +115,9 @@ class Server(jsonrpc_base.Server):
                     asyncio.get_running_loop().create_task(
                         self._receive_request(request))
                 else:
-                    self._pending_messages[data['id']].response = data
+                    pending_message = self._pending_messages.get(data['id'])
+                    if pending_message is not None:
+                        pending_message.response = data
 
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
