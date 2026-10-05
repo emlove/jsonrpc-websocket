@@ -174,6 +174,152 @@ async def test_client_closed(server):
             jsonrpc_base.Request('my_method', params=None, msg_id=1))
 
 
+async def test_pending_messages_removed_after_timeouts(server):
+    server._timeout = 0.01
+    server._session.handler = lambda websocket, data: None
+
+    for msg_id in range(1, 4):
+        with pytest.raises(TransportError) as transport_error:
+            await server.send_message(jsonrpc_base.Request(
+                'my_method', params=None, msg_id=msg_id))
+
+        assert isinstance(transport_error.value.args[1], asyncio.TimeoutError)
+        assert server._pending_messages == {}
+
+
+async def test_pending_message_removed_after_cancellation(server):
+    server._timeout = None
+    sent = asyncio.Event()
+    server._session.handler = lambda websocket, data: sent.set()
+    call = asyncio.create_task(server.send_message(jsonrpc_base.Request(
+        'my_method', params=None, msg_id='cancelled')))
+    await sent.wait()
+    assert 'cancelled' in server._pending_messages
+
+    call.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await call
+    assert server._pending_messages == {}
+
+
+@pytest.mark.parametrize('error', [aiohttp.ClientError, asyncio.TimeoutError])
+async def test_pending_message_removed_after_send_error(server, error):
+    def handler(websocket, data):
+        raise error('send failed')
+
+    server._session.handler = handler
+    with pytest.raises(TransportError) as transport_error:
+        await server.send_message(jsonrpc_base.Request(
+            'my_method', params=None, msg_id='failed'))
+
+    assert isinstance(transport_error.value.args[1], error)
+    assert server._pending_messages == {}
+
+
+async def test_response_received_before_send_finishes(server):
+    async def send_str(data):
+        request = json.loads(data)
+        server._session.receive(json.dumps({
+            'jsonrpc': '2.0', 'result': 19, 'id': request['id']}))
+        await asyncio.sleep(0)
+
+    with mock.patch.object(server._client, 'send_str', side_effect=send_str):
+        assert await server.subtract(42, 23) == 19
+    assert server._pending_messages == {}
+
+
+@pytest.mark.parametrize('cancelled', [False, True])
+@pytest.mark.parametrize('binary', [False, True])
+async def test_late_response_keeps_connection_usable(
+        server, cancelled, binary):
+    server._timeout = None if cancelled else 0.01
+    sent = asyncio.Event()
+    server._session.handler = lambda websocket, data: sent.set()
+    request = jsonrpc_base.Request('my_method', params=None, msg_id='late')
+    call = asyncio.create_task(server.send_message(request))
+    await sent.wait()
+    if cancelled:
+        call.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await call
+    else:
+        with pytest.raises(TransportError):
+            await call
+
+    assert server._pending_messages == {}
+    response = '{"jsonrpc": "2.0", "result": 1, "id": "late"}'
+    if binary:
+        server._session.receive_binary(response.encode())
+    else:
+        server._session.receive(response)
+
+    def handler(websocket, data):
+        request = json.loads(data)
+        websocket.test_receive(json.dumps({
+            'jsonrpc': '2.0', 'result': 2, 'id': request['id']}))
+
+    server._session.handler = handler
+    assert await asyncio.wait_for(server.my_method(), 1) == 2
+    assert server.connected
+    assert not server._session.run_loop_future.done()
+    assert server._pending_messages == {}
+
+
+@pytest.mark.parametrize('msg_id', ['unknown', None])
+async def test_unsolicited_response_ignored(server, msg_id):
+    server._session.receive(json.dumps({
+        'jsonrpc': '2.0', 'result': 1, 'id': msg_id}))
+    server._session.test_server.test_close()
+    await server._session.run_loop_future
+
+
+@pytest.mark.parametrize('cancelled', [False, True])
+async def test_real_websocket_after_abandoned_call(aiohttp_server, cancelled):
+    release_response = asyncio.Event()
+    request_received = asyncio.Event()
+
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse()
+        await websocket.prepare(request)
+        first = await websocket.receive_json()
+        request_received.set()
+        await release_response.wait()
+        await websocket.send_json({
+            'jsonrpc': '2.0', 'result': 1, 'id': first['id']})
+        second = await websocket.receive_json()
+        await websocket.send_json({
+            'jsonrpc': '2.0', 'result': 2, 'id': second['id']})
+        await websocket.close()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    async with aiohttp.ClientSession() as session:
+        server = Server(
+            endpoint.make_url('/rpc'), session=session, timeout=0.1)
+        reader = await server.ws_connect()
+        try:
+            call = asyncio.create_task(server.my_method())
+            await asyncio.wait_for(request_received.wait(), 1)
+            if cancelled:
+                call.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await call
+            else:
+                with pytest.raises(TransportError):
+                    await call
+            assert server._pending_messages == {}
+
+            release_response.set()
+            assert await asyncio.wait_for(server.my_method(), 1) == 2
+            assert server._pending_messages == {}
+        finally:
+            release_response.set()
+            await server.close()
+            await reader
+
+
 async def test_double_connect(server):
     with pytest.raises(TransportError, match='Connection already open.'):
         await server.ws_connect()
