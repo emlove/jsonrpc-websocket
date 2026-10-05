@@ -134,6 +134,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+3.3.0 (2026-10-05)
+~~~~~~~~~~~~~~~~~~
+- Clean up pending websocket calls on timeout and cancellation. `(#21) <https://github.com/emlove/jsonrpc-websocket/pull/21>`_ `@bensynapse <https://github.com/bensynapse>`_
+
 3.2.1 (2026-04-22)
 ~~~~~~~~~~~~~~~~~~
 - Update deprecated patterns of accessing the event loop through the aiohttp ClientSession. Instead use the new asyncio.get_running_loop().
