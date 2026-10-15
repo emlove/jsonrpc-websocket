@@ -157,6 +157,11 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+4.0.0 (2026-10-15)
+~~~~~~~~~~~~~~~~~~
+- Do not lose a new websocket client to a late close(). `(#23) <https://github.com/emlove/jsonrpc-websocket/pull/23>`_ `@olympia <https://github.com/olympia>`_
+- Forward ws_connect() kwargs to aiohttp, keep timeout for responses. `(#24) <https://github.com/emlove/jsonrpc-websocket/pull/24>`_ `@olympia <https://github.com/olympia>`_
+
 3.3.0 (2026-10-05)
 ~~~~~~~~~~~~~~~~~~
 - Clean up pending websocket calls on timeout and cancellation. `(#21) <https://github.com/emlove/jsonrpc-websocket/pull/21>`_ `@bensynapse <https://github.com/bensynapse>`_
