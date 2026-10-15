@@ -23,6 +23,7 @@ setup(
         'jsonrpc-base>=2.1.0',
         'aiohttp>=3.0.0',
         'async-timeout>=4.0.0',
+        'multidict>=4.5',
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

@@ -8,6 +8,7 @@ from aiohttp import ClientError
 from aiohttp.http_exceptions import HttpProcessingError
 import jsonrpc_base
 from jsonrpc_base import TransportError
+from multidict import CIMultiDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +39,9 @@ class Server(jsonrpc_base.Server):
         self._connect_kwargs['headers']['Accept'] = (
             self._connect_kwargs['headers'].get(
                 'Accept', 'application/json-rpc'))
-        self._timeout = self._connect_kwargs.get('timeout')
+        # Only used for waiting on responses, aiohttp's ws_connect() gets
+        # its own timeout through the keyword arguments of ws_connect()
+        self._timeout = self._connect_kwargs.pop('timeout', None)
         self._pending_messages = {}
 
     async def send_message(self, message):
@@ -65,17 +68,30 @@ class Server(jsonrpc_base.Server):
             if pending_message is not None:
                 del self._pending_messages[message.response_id]
 
-    async def ws_connect(self):
-        """Connect to the websocket server."""
+    async def ws_connect(self, **kwargs):
+        """Connect to the websocket server.
+
+        Keyword arguments are passed on to aiohttp's ws_connect(), on top of
+        the ones given to the constructor, and win over those. Headers are
+        merged the same way, case-insensitively; leaving them out or passing
+        None keeps the constructor headers. A timeout given here is
+        aiohttp's websocket timeout, while the timeout given to the
+        constructor is how long to wait for a response.
+        """
         if self.connected:
             raise TransportError('Connection already open.')
+
+        headers = CIMultiDict(self._connect_kwargs['headers'])
+        headers.update(kwargs.pop('headers', None) or {})
+        connect_kwargs = {
+            **self._connect_kwargs, **kwargs, 'headers': headers}
 
         try:
             if self._internal_session and (
                     self._session is None or self._session.closed):
                 self._session = aiohttp.ClientSession()
             client = await self._session.ws_connect(
-                self._url, **self._connect_kwargs)
+                self._url, **connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
         self._client = client

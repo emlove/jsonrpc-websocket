@@ -2,10 +2,12 @@ import asyncio
 import json
 from unittest import mock
 import sys
+import warnings
 
 import aiohttp
 from aiohttp import ClientWebSocketResponse
 import aiohttp.web
+from multidict import CIMultiDict
 import pytest
 import pytest_asyncio
 
@@ -25,8 +27,10 @@ class JsonTestClient():
     def __init__(self):
         self.test_server = None
         self.connect_side_effect = None
+        self.connect_kwargs = None
 
     async def ws_connect(self, *args, **kwargs):
+        self.connect_kwargs = kwargs
         if self.connect_side_effect:
             self.connect_side_effect()
         self.test_server = JsonTestServer()
@@ -499,6 +503,91 @@ async def test_real_websocket_cancelled_close(
         await server.close()
         if session is not None:
             await session.close()
+
+
+async def test_timeout_not_passed_to_ws_connect(server):
+    assert server._timeout == 0.2
+    assert 'timeout' not in server._session.connect_kwargs
+
+
+async def test_ws_connect_kwargs(client):
+    server = Server('/xmlrpc', session=client, timeout=0.2, heartbeat=5,
+                    headers={'x-test': 'a'})
+    reader = await server.ws_connect(
+        heartbeat=10, autoping=False, timeout=3, headers={'x-call': 'b'})
+    assert client.connect_kwargs == {
+        'heartbeat': 10,
+        'timeout': 3,
+        'autoping': False,
+        'headers': {
+            'x-test': 'a',
+            'x-call': 'b',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json-rpc',
+        },
+    }
+    await server.close()
+    await asyncio.wait_for(reader, 1)
+
+    # Arguments of one ws_connect() call do not stick to the next one
+    reader = await server.ws_connect(headers=None)
+    assert client.connect_kwargs == {
+        'heartbeat': 5,
+        'headers': {
+            'x-test': 'a',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json-rpc',
+        },
+    }
+    await server.close()
+    await asyncio.wait_for(reader, 1)
+
+
+async def test_ws_connect_keeps_duplicate_headers(client):
+    headers = CIMultiDict([('X-A', '1'), ('X-A', '2')])
+    server = Server('/xmlrpc', session=client, headers=headers)
+    reader = await server.ws_connect()
+    assert client.connect_kwargs['headers'].getall('X-A') == ['1', '2']
+    await server.close()
+    await asyncio.wait_for(reader, 1)
+
+    reader = await server.ws_connect(headers={'X-B': '3'})
+    assert client.connect_kwargs['headers'].getall('X-A') == ['1', '2']
+    assert client.connect_kwargs['headers'].getall('X-B') == ['3']
+    await server.close()
+    await asyncio.wait_for(reader, 1)
+
+
+async def test_ws_connect_headers_override_case_insensitively(client):
+    server = Server('/xmlrpc', session=client)
+    reader = await server.ws_connect(headers=[('accept', 'text/plain')])
+    headers = client.connect_kwargs['headers']
+    assert headers.getall('Accept') == ['text/plain']
+    assert headers.getall('Content-Type') == ['application/json']
+    await server.close()
+    await asyncio.wait_for(reader, 1)
+
+
+async def test_real_websocket_no_timeout_deprecation_warning(aiohttp_server):
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse()
+        await websocket.prepare(request)
+        async for msg in websocket:
+            pass
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    async with aiohttp.ClientSession() as session:
+        server = Server(
+            endpoint.make_url('/rpc'), session=session, timeout=0.5)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'error', message='.*timeout', category=DeprecationWarning)
+            reader = await server.ws_connect()
+        await server.close()
+        await asyncio.wait_for(reader, 1)
 
 
 async def test_double_connect(server):
