@@ -21,7 +21,7 @@ else:
 class Server(jsonrpc_base.Server):
     """A connection to a HTTP JSON-RPC server, backed by aiohttp"""
 
-    def __init__(self, url, session=None, **connect_kwargs):
+    def __init__(self, url, session=None, *, timeout=None, **connect_kwargs):
         super().__init__()
         self._session = session or aiohttp.ClientSession()
 
@@ -41,7 +41,7 @@ class Server(jsonrpc_base.Server):
                 'Accept', 'application/json-rpc'))
         # Only used for waiting on responses, aiohttp's ws_connect() gets
         # its own timeout through the keyword arguments of ws_connect()
-        self._timeout = self._connect_kwargs.pop('timeout', None)
+        self._timeout = timeout
         self._pending_messages = {}
 
     async def send_message(self, message):
