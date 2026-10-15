@@ -71,19 +71,21 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Connection already open.')
 
         try:
-            if self._internal_session and self._session.closed:
+            if self._internal_session and (
+                    self._session is None or self._session.closed):
                 self._session = aiohttp.ClientSession()
-            self._client = await self._session.ws_connect(
+            client = await self._session.ws_connect(
                 self._url, **self._connect_kwargs)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
-        return asyncio.get_running_loop().create_task(self._ws_loop())
+        self._client = client
+        return asyncio.get_running_loop().create_task(self._ws_loop(client))
 
-    async def _ws_loop(self):
+    async def _ws_loop(self, client):
         """Listen for messages from the websocket server."""
         msg = None
         try:
-            async for msg in self._client:
+            async for msg in client:
                 if msg.type == aiohttp.WSMsgType.ERROR:
                     break
                 elif msg.type == aiohttp.WSMsgType.BINARY:
@@ -122,18 +124,33 @@ class Server(jsonrpc_base.Server):
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
         finally:
-            await self.close()
+            if self._client is client:
+                await self.close()
+            else:
+                # close() already detached this client, so only finish
+                # closing it here; self.close() would also tear down a
+                # connection (and internal session) opened since then
+                await client.close()
             if msg and msg.type == aiohttp.WSMsgType.ERROR:
                 raise TransportError(
                     'Websocket error detected. Connection closed.')
 
     async def close(self):
         """Close the connection to the websocket server."""
-        if self.connected:
-            await self._client.close()
-            self._client = None
+        client = self._client
+        self._client = None
+        session = None
         if self._internal_session:
-            await self._session.close()
+            # Detach the session too, so a ws_connect() made while this
+            # close() is still running opens a new one
+            session = self._session
+            self._session = None
+        try:
+            if client is not None:
+                await client.close()
+        finally:
+            if session is not None:
+                await session.close()
 
     @property
     def connected(self):

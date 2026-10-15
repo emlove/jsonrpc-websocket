@@ -320,6 +320,187 @@ async def test_real_websocket_after_abandoned_call(aiohttp_server, cancelled):
             await reader
 
 
+async def test_real_websocket_close_frame_right_after_handshake(
+        aiohttp_server):
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse()
+        await websocket.prepare(request)
+        await websocket.close()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    async with aiohttp.ClientSession() as session:
+        server = Server(endpoint.make_url('/rpc'), session=session)
+        reader = await server.ws_connect()
+        await server.close()
+        await asyncio.wait_for(reader, 1)
+        assert not server.connected
+
+
+@pytest.mark.parametrize('internal_session', [False, True])
+async def test_real_websocket_reader_cancelled_while_closing(
+        aiohttp_server, internal_session):
+    close_received = asyncio.Event()
+    release_close = asyncio.Event()
+
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse(autoclose=False)
+        await websocket.prepare(request)
+        await websocket.send_str('not json')
+        msg = await websocket.receive()
+        if msg.type == aiohttp.WSMsgType.CLOSE:
+            close_received.set()
+            await release_close.wait()
+        await websocket.close()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    session = None if internal_session else aiohttp.ClientSession()
+    server = Server(endpoint.make_url('/rpc'), session=session)
+    reader = await server.ws_connect()
+    try:
+        await asyncio.wait_for(close_received.wait(), 1)
+        reader.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await reader
+        assert not server.connected
+    finally:
+        release_close.set()
+        await server.close()
+        if session is not None:
+            await session.close()
+
+
+@pytest.mark.parametrize('internal_session', [False, True])
+async def test_real_websocket_reconnect_during_close_handshake(
+        aiohttp_server, internal_session):
+    close_received = asyncio.Event()
+    release_close = asyncio.Event()
+
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse(autoclose=False)
+        await websocket.prepare(request)
+        msg = await websocket.receive()
+        if msg.type == aiohttp.WSMsgType.CLOSE:
+            close_received.set()
+            await release_close.wait()
+        await websocket.close()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    session = None if internal_session else aiohttp.ClientSession()
+    server = Server(endpoint.make_url('/rpc'), session=session)
+    old_reader = await server.ws_connect()
+    reader = new_client = None
+    try:
+        closing = asyncio.create_task(server.close())
+        await asyncio.wait_for(close_received.wait(), 1)
+        reader = await server.ws_connect()
+        new_client = server._client
+        release_close.set()
+        await asyncio.wait_for(closing, 1)
+        await asyncio.wait_for(old_reader, 1)
+        assert server._client is new_client
+        assert server.connected
+    finally:
+        release_close.set()
+        await server.close()
+        if new_client is not None:
+            # Also close the new client if the test failed and lost it
+            await new_client.close()
+            await asyncio.wait_for(reader, 1)
+        if session is not None:
+            await session.close()
+
+
+async def test_real_websocket_reconnect_while_closing_unstarted_reader(
+        aiohttp_server):
+    close_received = asyncio.Event()
+    release_close = asyncio.Event()
+
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse(autoclose=False)
+        await websocket.prepare(request)
+        msg = await websocket.receive()
+        if msg.type == aiohttp.WSMsgType.CLOSE:
+            close_received.set()
+            await release_close.wait()
+        await websocket.close()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    server = Server(endpoint.make_url('/rpc'))  # internal session
+    new = {}
+
+    async def reconnect():
+        await close_received.wait()
+        new['reader'] = await server.ws_connect()
+        new['client'] = server._client
+        release_close.set()
+
+    reconnecting = asyncio.create_task(reconnect())
+    old_reader = await server.ws_connect()
+    try:
+        # No await in between, so the old reader has not started yet
+        await server.close()
+        await asyncio.wait_for(reconnecting, 1)
+        await asyncio.wait_for(old_reader, 1)
+        assert server._client is new['client']
+        assert server.connected
+    finally:
+        release_close.set()
+        reconnecting.cancel()
+        await asyncio.gather(reconnecting, return_exceptions=True)
+        await server.close()
+        if 'client' in new:
+            # Also close the new client if the test failed and lost it
+            await new['client'].close()
+            await asyncio.wait_for(new['reader'], 1)
+
+
+@pytest.mark.parametrize('internal_session', [False, True])
+async def test_real_websocket_cancelled_close(
+        aiohttp_server, internal_session):
+    async def handler(request):
+        websocket = aiohttp.web.WebSocketResponse()
+        await websocket.prepare(request)
+        async for msg in websocket:
+            pass
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    session = None if internal_session else aiohttp.ClientSession()
+    server = Server(endpoint.make_url('/rpc'), session=session)
+    reader = await server.ws_connect()
+    client = server._client
+    used_session = server._session
+    try:
+        closing = asyncio.create_task(server.close())
+        await asyncio.sleep(0)
+        closing.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await closing
+        await asyncio.wait_for(reader, 1)
+        assert not server.connected
+        assert client.closed
+        assert used_session.closed or not internal_session
+    finally:
+        await client.close()
+        await server.close()
+        if session is not None:
+            await session.close()
+
+
 async def test_double_connect(server):
     with pytest.raises(TransportError, match='Connection already open.'):
         await server.ws_connect()
