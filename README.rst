@@ -128,6 +128,29 @@ Pass through aiohttp exceptions
 
     asyncio.get_event_loop().run_until_complete(routine())
 
+Set websocket timeouts
+~~~~~~~~~~~~~~~~~~~~~~
+
+The ``timeout`` given to ``Server`` is how long to wait for a response. Keyword arguments given to ``ws_connect()`` are passed on to aiohttp's ``ws_connect()``, for example its websocket timeouts (``aiohttp.ClientWSTimeout`` needs aiohttp 3.11 or newer):
+
+.. code-block:: python
+
+    import asyncio
+    import aiohttp
+    from jsonrpc_websocket import Server
+
+    async def routine():
+        server = Server('ws://localhost:9090', timeout=5)
+        try:
+            await server.ws_connect(
+                timeout=aiohttp.ClientWSTimeout(ws_close=5))
+
+            await server.foo()
+        finally:
+            await server.close()
+
+    asyncio.get_event_loop().run_until_complete(routine())
+
 Tests
 -----
 Install the Python tox package and run ``tox``, it'll test this package with various versions of Python.
