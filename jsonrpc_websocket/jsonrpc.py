@@ -54,13 +54,18 @@ class Server(jsonrpc_base.Server):
 
         pending_message = None
         if message.response_id:
-            pending_message = PendingMessage()
+            pending_message = PendingMessage(self._client)
             self._pending_messages[message.response_id] = pending_message
 
         try:
             await self._client.send_str(message.serialize())
-            response = (await pending_message.wait(self._timeout)
-                        if pending_message is not None else None)
+            response = None
+            if pending_message is not None:
+                response = await pending_message.wait(self._timeout)
+                if pending_message.connection_lost:
+                    raise TransportError(
+                        'Connection closed before a response was received',
+                        message)
             return message.parse_response(response)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
@@ -140,6 +145,8 @@ class Server(jsonrpc_base.Server):
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', None, exc)
         finally:
+            # No responses can arrive for this client anymore
+            self._fail_pending_messages(client)
             if self._client is client:
                 await self.close()
             else:
@@ -163,10 +170,19 @@ class Server(jsonrpc_base.Server):
             self._session = None
         try:
             if client is not None:
+                # The reader of this client may never have started, so don't
+                # rely on it to release the pending messages
+                self._fail_pending_messages(client)
                 await client.close()
         finally:
             if session is not None:
                 await session.close()
+
+    def _fail_pending_messages(self, client):
+        """Release the calls still waiting for a response on client."""
+        for pending_message in list(self._pending_messages.values()):
+            if pending_message.client is client:
+                pending_message.fail_connection_lost()
 
     @property
     def connected(self):
@@ -186,7 +202,9 @@ class Server(jsonrpc_base.Server):
 class PendingMessage(object):
     """Wait for response of pending message."""
 
-    def __init__(self):
+    def __init__(self, client=None):
+        self.client = client
+        self.connection_lost = False
         self._event = asyncio.Event()
         self._response = None
 
@@ -203,3 +221,9 @@ class PendingMessage(object):
     def response(self, value):
         self._response = value
         self._event.set()
+
+    def fail_connection_lost(self):
+        """Stop waiting, the connection closed before the response came."""
+        if not self._event.is_set():
+            self.connection_lost = True
+            self._event.set()

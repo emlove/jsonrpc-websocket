@@ -220,6 +220,76 @@ async def test_pending_message_removed_after_send_error(server, error):
     assert server._pending_messages == {}
 
 
+@pytest.mark.parametrize('local_close', [False, True])
+async def test_pending_message_failed_on_connection_close(server, local_close):
+    server._timeout = None
+    sent = asyncio.Event()
+    server._session.handler = lambda websocket, data: sent.set()
+    call = asyncio.create_task(server.send_message(jsonrpc_base.Request(
+        'my_method', params=None, msg_id='lost')))
+    await sent.wait()
+
+    if local_close:
+        await server.close()
+    else:
+        server._session.test_server.test_close()
+    with pytest.raises(TransportError, match='Connection closed before'):
+        await asyncio.wait_for(call, 1)
+    assert server._pending_messages == {}
+
+
+async def test_pending_message_on_new_connection_kept_on_old_close(server):
+    server._timeout = None
+    old_client = server._client
+    old_reader = server._session.run_loop_future
+    # Detach the old client without letting its reader finish yet
+    server._client = None
+    new_reader = await server.ws_connect()
+    sent = asyncio.Event()
+    server._session.handler = lambda websocket, data: sent.set()
+    call = asyncio.create_task(server.send_message(jsonrpc_base.Request(
+        'my_method', params=None, msg_id='new')))
+    await sent.wait()
+
+    old_client.test_close()
+    await old_reader
+    assert not call.done()
+
+    server._session.receive(json.dumps(
+        {'jsonrpc': '2.0', 'result': 1, 'id': 'new'}))
+    assert await asyncio.wait_for(call, 1) == 1
+    server._session.run_loop_future = new_reader
+
+
+async def test_real_websocket_pending_call_failed_on_heartbeat_timeout(
+        aiohttp_server):
+    release = asyncio.Event()
+
+    async def handler(request):
+        # Never read, so neither PINGs nor requests get an answer
+        websocket = aiohttp.web.WebSocketResponse(autoping=False)
+        await websocket.prepare(request)
+        await release.wait()
+        return websocket
+
+    app = aiohttp.web.Application()
+    app.router.add_get('/rpc', handler)
+    endpoint = await aiohttp_server(app)
+    async with aiohttp.ClientSession() as session:
+        server = Server(endpoint.make_url('/rpc'), session=session,
+                        heartbeat=0.2)
+        reader = await server.ws_connect()
+        try:
+            with pytest.raises(TransportError,
+                               match='Connection closed before'):
+                await asyncio.wait_for(server.my_method(), 2)
+            assert server._pending_messages == {}
+        finally:
+            release.set()
+            await server.close()
+            await asyncio.gather(reader, return_exceptions=True)
+
+
 async def test_response_received_before_send_finishes(server):
     async def send_str(data):
         request = json.loads(data)
