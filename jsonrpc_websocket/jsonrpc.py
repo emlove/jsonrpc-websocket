@@ -42,7 +42,7 @@ class Server(jsonrpc_base.Server):
         # Only used for waiting on responses, aiohttp's ws_connect() gets
         # its own timeout through the keyword arguments of ws_connect()
         self._timeout = timeout
-        self._pending_messages = {}
+        self._pending_messages = None
 
     async def send_message(self, message):
         """Send the HTTP message to the server and return the message response.
@@ -52,10 +52,12 @@ class Server(jsonrpc_base.Server):
         if self._client is None:
             raise TransportError('Client is not connected.', message)
 
+        pending_messages = self._pending_messages
+
         pending_message = None
         if message.response_id:
-            pending_message = PendingMessage(self._client)
-            self._pending_messages[message.response_id] = pending_message
+            pending_message = PendingMessage()
+            pending_messages[message.response_id] = pending_message
 
         try:
             await self._client.send_str(message.serialize())
@@ -69,7 +71,7 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Transport Error', message, exc)
         finally:
             if pending_message is not None:
-                del self._pending_messages[message.response_id]
+                del pending_messages[message.response_id]
 
     async def ws_connect(self, **kwargs):
         """Connect to the websocket server.
@@ -98,9 +100,10 @@ class Server(jsonrpc_base.Server):
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Error connecting to server', None, exc)
         self._client = client
-        return asyncio.get_running_loop().create_task(self._ws_loop(client))
+        self._pending_messages = {}
+        return asyncio.get_running_loop().create_task(self._ws_loop(client, self._pending_messages))
 
-    async def _ws_loop(self, client):
+    async def _ws_loop(self, client, pending_messages):
         """Listen for messages from the websocket server."""
         msg = None
         try:
@@ -136,7 +139,7 @@ class Server(jsonrpc_base.Server):
                     asyncio.get_running_loop().create_task(
                         self._receive_request(request))
                 else:
-                    pending_message = self._pending_messages.get(data['id'])
+                    pending_message = pending_messages.get(data['id'])
                     if pending_message is not None:
                         pending_message.response = data
 
@@ -144,7 +147,7 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Transport Error', None, exc)
         finally:
             # No responses can arrive for this client anymore
-            self._fail_pending_messages(client)
+            self._fail_pending_messages(pending_messages)
             if self._client is client:
                 await self.close()
             else:
@@ -159,7 +162,10 @@ class Server(jsonrpc_base.Server):
     async def close(self):
         """Close the connection to the websocket server."""
         client = self._client
+        pending_messages = self._pending_messages
         self._client = None
+        self._pending_messages = None
+
         session = None
         if self._internal_session:
             # Detach the session too, so a ws_connect() made while this
@@ -170,17 +176,16 @@ class Server(jsonrpc_base.Server):
             if client is not None:
                 # The reader of this client may never have started, so don't
                 # rely on it to release the pending messages
-                self._fail_pending_messages(client)
+                self._fail_pending_messages(pending_messages)
                 await client.close()
         finally:
             if session is not None:
                 await session.close()
 
-    def _fail_pending_messages(self, client):
+    def _fail_pending_messages(self, pending_messages):
         """Release the calls still waiting for a response on client."""
-        for pending_message in self._pending_messages.values():
-            if (pending_message.client is client
-                    and pending_message.response is None):
+        for pending_message in list(pending_messages.values()):
+            if (pending_message.response is None):
                 pending_message.response = TransportError(
                     'Connection closed before a response was received')
 
@@ -202,8 +207,7 @@ class Server(jsonrpc_base.Server):
 class PendingMessage(object):
     """Wait for response of pending message."""
 
-    def __init__(self, client=None):
-        self.client = client
+    def __init__(self):
         self._event = asyncio.Event()
         self._response = None
 

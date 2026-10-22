@@ -235,7 +235,7 @@ async def test_pending_message_failed_on_connection_close(server, local_close):
         server._session.test_server.test_close()
     with pytest.raises(TransportError, match='Connection closed before'):
         await asyncio.wait_for(call, 1)
-    assert server._pending_messages == {}
+    assert not server._pending_messages
 
 
 async def test_pending_message_on_new_connection_kept_on_old_close(server):
@@ -283,7 +283,7 @@ async def test_real_websocket_pending_call_failed_on_heartbeat_timeout(
             with pytest.raises(TransportError,
                                match='Connection closed before'):
                 await asyncio.wait_for(server.my_method(), 2)
-            assert server._pending_messages == {}
+            assert not server._pending_messages
         finally:
             release.set()
             await server.close()
@@ -387,7 +387,7 @@ async def test_real_websocket_after_abandoned_call(aiohttp_server, cancelled):
 
             release_response.set()
             assert await asyncio.wait_for(server.my_method(), 1) == 2
-            assert server._pending_messages == {}
+            assert not server._pending_messages
         finally:
             release_response.set()
             await server.close()
