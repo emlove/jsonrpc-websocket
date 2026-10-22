@@ -62,10 +62,8 @@ class Server(jsonrpc_base.Server):
             response = None
             if pending_message is not None:
                 response = await pending_message.wait(self._timeout)
-                if pending_message.connection_lost:
-                    raise TransportError(
-                        'Connection closed before a response was received',
-                        message)
+                if isinstance(response, Exception):
+                    raise response
             return message.parse_response(response)
         except (ClientError, HttpProcessingError, asyncio.TimeoutError) as exc:
             raise TransportError('Transport Error', message, exc)
@@ -180,9 +178,11 @@ class Server(jsonrpc_base.Server):
 
     def _fail_pending_messages(self, client):
         """Release the calls still waiting for a response on client."""
-        for pending_message in list(self._pending_messages.values()):
-            if pending_message.client is client:
-                pending_message.fail_connection_lost()
+        for pending_message in self._pending_messages.values():
+            if (pending_message.client is client
+                    and pending_message.response is None):
+                pending_message.response = TransportError(
+                    'Connection closed before a response was received')
 
     @property
     def connected(self):
@@ -204,7 +204,6 @@ class PendingMessage(object):
 
     def __init__(self, client=None):
         self.client = client
-        self.connection_lost = False
         self._event = asyncio.Event()
         self._response = None
 
@@ -221,9 +220,3 @@ class PendingMessage(object):
     def response(self, value):
         self._response = value
         self._event.set()
-
-    def fail_connection_lost(self):
-        """Stop waiting, the connection closed before the response came."""
-        if not self._event.is_set():
-            self.connection_lost = True
-            self._event.set()
