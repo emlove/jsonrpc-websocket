@@ -184,9 +184,9 @@ class Server(jsonrpc_base.Server):
                 await session.close()
 
     def _fail_pending_messages(self, pending_messages):
-        """Release the calls still waiting for a response on client."""
+        """Release the calls waiting for a response from a closed client."""
         for pending_message in list(pending_messages.values()):
-            if (pending_message.response is None):
+            if pending_message.response is None:
                 pending_message.response = TransportError(
                     'Connection closed before a response was received')
 
