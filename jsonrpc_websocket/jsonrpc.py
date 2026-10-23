@@ -101,7 +101,8 @@ class Server(jsonrpc_base.Server):
             raise TransportError('Error connecting to server', None, exc)
         self._client = client
         self._pending_messages = {}
-        return asyncio.get_running_loop().create_task(self._ws_loop(client, self._pending_messages))
+        return asyncio.get_running_loop().create_task(
+            self._ws_loop(client, self._pending_messages))
 
     async def _ws_loop(self, client, pending_messages):
         """Listen for messages from the websocket server."""
