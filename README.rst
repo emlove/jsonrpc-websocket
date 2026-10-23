@@ -157,6 +157,10 @@ Install the Python tox package and run ``tox``, it'll test this package with var
 
 Changelog
 ---------
+4.1.0 (2026-10-23)
+~~~~~~~~~~~~~~~~~~
+- release pending messages when read loop ends unexpectedly. `(#25) <https://github.com/emlove/jsonrpc-websocket/pull/25>`_ `@Lamarqe <https://github.com/Lamarqe>`_
+
 4.0.0 (2026-10-15)
 ~~~~~~~~~~~~~~~~~~
 - Do not lose a new websocket client to a late close(). `(#23) <https://github.com/emlove/jsonrpc-websocket/pull/23>`_ `@olympia <https://github.com/olympia>`_
